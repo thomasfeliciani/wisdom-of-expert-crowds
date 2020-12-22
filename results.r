@@ -7,18 +7,19 @@ rm(list = ls())
 library(ggplot2)
 library(reshape2)
 library(viridis)
-#library(gridExtra)
 source("simulation.r")
 
-
+exportFormat = "png" # "png" or "tiff" are supported.
 
 # Figure 1: merit distribution__________________________________________________
-png(
-  filename = "./outputGraphics/figure_1.png",
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_1.", exportFormat),
   width = 1500,
   height = 800, #600,
   res = 300, units = "px"
 )
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+    do.call(tiff, figureParameters)}
 
 par(mfrow=c(1,2))
 
@@ -45,7 +46,7 @@ title(bquote(atop(
   "high merit condition", paste(alpha, " = 5, ", beta, " = 2"))))
 
 dev.off()
-
+rm(x, yl)
 
 
 # Figure 2: Grading languages___________________________________________________
@@ -69,7 +70,6 @@ d$init <- c(0,0)
 d$fin <- c(1,1)
 
 d$id <- as.factor(d$id)
-#col <- "#00000000"#"darkorange1"
 cl = "gray40"
 pointer=")["
 labz = c(
@@ -78,26 +78,28 @@ ps = 3#30
 ls = 2.8
 padd = 0.02
 
-png(
-  filename = "./outputGraphics/figure_2.png",
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_2.", exportFormat),
   width = 800,
   height = 800,
   units = "px",
   res = 300
 )
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
 
 ggplot(
   d,
   aes(x=id)
 ) +
   geom_rect(aes(ymin=V1-padd, ymax=V1+padd, xmin=id, xmax=id), col="white") +
-  geom_text(aes(y=V1, x=id, color=col, angle=90,label=pointer), size=ps) +
+  geom_text(aes(y=V1, x=id, angle=90,label=pointer), size=ps) +
   geom_rect(aes(ymin=V2-padd, ymax=V2+padd, xmin=id, xmax=id), col="white") +
-  geom_text(aes(y=V2, x=id, color=col, angle=90, label=pointer), size=ps) +
+  geom_text(aes(y=V2, x=id, angle=90, label=pointer), size=ps) +
   geom_rect(aes(ymin=V3-padd, ymax=V3+padd, xmin=id, xmax=id), col="white") +
-  geom_text(aes(y=V3, x=id, color=col, angle=90, label=pointer), size=ps) +
+  geom_text(aes(y=V3, x=id, angle=90, label=pointer), size=ps) +
   geom_rect(aes(ymin=V4-padd, ymax=V4+padd, xmin=id, xmax=id), col="white") +
-  geom_text(aes(y=V4, x=id, color=col, angle=90, label=pointer), size=ps) +
+  geom_text(aes(y=V4, x=id, angle=90, label=pointer), size=ps) +
   
   geom_rect(aes(ymin=init-0.01, ymax=init+0.01, xmin=id, xmax=id), col="white")+
   geom_text(aes(y=init, x=id, angle=90, label="["), size=ps) +
@@ -115,12 +117,8 @@ ggplot(
   geom_text(aes(y=(1-V4)/2+V4, x=id, label=labz[5], hjust = 0),
             color=cl,check_overlap=TRUE, size=ls) +
   ylab("\nmerit") +
-  #scale_y_continuous(expand=c(0.001,0.01), breaks=c(0:5/5)) +
   scale_y_continuous(expand=c(0,0.002), breaks=c(0:5/5)) +
-  #scale_x_discrete(expand=c(0,0.1))+#, breaks=c(0:5/5)) +
-  #scale_x_discrete(expand = c(-1,2), breaks = c(0,1)) +
-  scale_x_discrete(expand = expansion(mult = c(0.3,0.9))) +
-  #xlim("regular", "strict", "") +
+  scale_x_discrete(expand = expansion(mult = c(0.3,0.9)), position = "top") +
   theme(
     legend.position = "none",
     panel.border = element_blank(),
@@ -134,12 +132,12 @@ ggplot(
   )
 
 dev.off()
+rm(asymm, gl, cl, labz, ls, padd, pointer, ps, t, d)
 
 #_______________________________________________________________________________
 # 
 # Importing simulation data
 #_______________________________________________________________________________
-#rm(list=ls())
 
 
 # Loading the results data file:
@@ -180,13 +178,16 @@ df2$panel <- 2
 df <- rbind(df1, df2)
 ###
 
-png(
-  filename = paste0("./outputGraphics/figure_3.png"),
-  width = 1100, #800,
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_3.", exportFormat),
+  width = 1100,
   height = 1100,
   units = "px",
   res = 300
 )
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
 ggplot(df, aes(y = Spearman, x = aggrRule, fill = aggrRule)) +
   geom_violin(fill = "gray70", color = "gray60") +
   geom_boxplot(color = "black", alpha = 0.9, width = 0.6) +
@@ -258,14 +259,16 @@ dft$variable[dft$variable == "RankEff50"] <- "k=50"
 #  levels = rev(levels(dft$aggrRule))
 #)
 
-
-png(
-  filename = paste0("./outputGraphics/figure_4.png"),
-  width = 1600,#1200,
-  height = 1100,#2100,
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_4.", exportFormat),
+  width = 1600,
+  height = 1100,
   units = "px",
   res = 300
 )
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
 ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
   geom_violin(fill = "gray70", color = "gray60") +
   geom_boxplot(color = "black", alpha = 0.9, width = 0.6) +
@@ -299,7 +302,6 @@ ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
     panel.grid.minor = element_blank(),
     panel.spacing = unit(1, "lines"),
     strip.background = element_rect(fill="transparent"),
-    #strip.text = element_text(angle = 45, hjust = 0, vjust = 0),
     strip.text.y.left = element_text(angle = 0),
     axis.line = element_blank(),
     axis.title = element_blank(),
@@ -333,13 +335,16 @@ dft <- rii[,c(
 )]
 dft <- melt(dft, id.vars = c("aggrRule", "nReviewersPerProp", "competence"))
 
-png(
-  filename = paste0("./outputGraphics/figure_5.png"),
-  width = 1600,#1200,
-  height = 2200,#2100,
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_5.", exportFormat),
+  width = 1600,
+  height = 2200,
   units = "px",
   res = 300
 )
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
 ggplot(
   dft,
   aes(
@@ -407,13 +412,16 @@ dft <- rii[,c(
 )]
 dft <- melt(dft, id.vars = c("aggrRule", "scale"))
 
-png(
-  filename = paste0("./outputGraphics/figure_6.png"),
-  width = 1600,#1200,
-  height = 2000,#2100,
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_6.", exportFormat),
+  width = 1600,
+  height = 2000,
   units = "px",
   res = 300
 )
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
 ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
   geom_violin(fill = "gray70", color = "gray60") +
   geom_boxplot(color = "black", alpha = 0.9, width = 0.6) +
@@ -429,9 +437,6 @@ ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
     #breaks = seq(from = 0, to = 1, by = 0.2),
     expand = c(0,0)
   ) +
-  #facet_wrap("variable", ncol = 1, strip.position = "left") +
-  #facet_wrap("variable", ncol = 2) +#, strip.position = "left") +
-  #facet_grid(rows = "scale", cols = "variable") +
   facet_grid(
     scale ~ variable,
     labeller = labeller(
@@ -445,7 +450,6 @@ ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
     )
   ) +
   scale_fill_viridis(begin = 0, discrete = TRUE, option = colorScheme) +
-  #coord_flip() +
   theme(
     plot.title = element_text(size=14),
     plot.subtitle = element_text(size=12),
@@ -457,7 +461,6 @@ ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
     panel.grid.minor = element_blank(),
     panel.spacing = unit(1, "lines"),
     strip.background = element_rect(fill="transparent"),
-    #strip.text = element_text(angle = 45, hjust = 0, vjust = 0),
     strip.text.y.right = element_text(angle = 0),
     axis.line = element_blank(),
     axis.title = element_blank(),
@@ -490,13 +493,16 @@ dft <- rii[,c(
 )]
 dft <- melt(dft, id.vars = c("aggrRule", "scale"))
 
-png(
-  filename = paste0("./outputGraphics/figure_7.png"),
-  width = 1600,#1200,
-  height = 2000,#2100,
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_7.", exportFormat),
+  width = 1600,
+  height = 2000,
   units = "px",
   res = 300
 )
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
 ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
   geom_violin(fill = "gray70", color = "gray60") +
   geom_boxplot(color = "black", alpha = 0.9, width = 0.6) +
@@ -578,13 +584,16 @@ dft <- rii[,c(
 )]
 dft <- melt(dft, id.vars = c("aggrRule", "glh", "competence"))
 
-png(
-  filename = paste0("./outputGraphics/figure_8.png"),
-  width = 1600,#1200,
-  height = 2200,#2100,
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_8.", exportFormat),
+  width = 1600,
+  height = 2200,
   units = "px",
   res = 300
 )
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
 ggplot(
   dft,
   aes(
@@ -653,12 +662,15 @@ ifelse(
 
 # and plotting it:
 if(file.exists(surveyDir)) {
-  png(
-    filename = "./outputGraphics/figure_A1.png",
+  figureParameters <- list(
+    filename = paste0("./outputGraphics/figure_A1.", exportFormat),
     width = 1600,
     height = 900,
-    res = 300, units = "px"
+    units = "px",
+    res = 300
   )
+  if(exportFormat == "png") {do.call(png, figureParameters)} else {
+    do.call(tiff, figureParameters)}
   
   par(mfrow=c(1,2))
   
@@ -677,11 +689,12 @@ if(file.exists(surveyDir)) {
     xaxp = c(0, 100, 2), ylab = "", xlab = "",
     main = "fourth threshold"
   )
-  
   dev.off()
+  
 }
 
 
+rm(s)
 
 
 
@@ -724,13 +737,16 @@ df$variable <- factor(
   )
 )
 
-png(
-  filename = paste0("./outputGraphics/figure_B1.png"),
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_B1.", exportFormat),
   width = 1400,
   height = 2200,
   units = "px",
   res = 300
 )
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
 ggplot(df, aes(y = value, x = aggrRule, fill = aggrRule)) +
   geom_violin(fill = "gray70", color = "gray60") +
   geom_boxplot(color = "black", alpha = 0.9, width = 0.6) +
