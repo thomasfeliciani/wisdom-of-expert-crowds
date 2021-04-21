@@ -335,7 +335,7 @@ hypermean <- function(scores, dampingOutliers = TRUE) {
   # with those of the rest of the panel) are to be given a low weight
   # (dampingOutliers == TRUE) or a high one (dampingOutliers == FALSE).
   ifelse (
-    dampingOutliers == TRUE, # if outliers must be dampened...
+    dampingOutliers == TRUE & !all(is.na(revWeights)), # if outliers must be dampened...
     revWeights <- (revWeights + 1) / 2, # ... then their weight is their corr.;
     revWeights <- 1 - ((revWeights + 1) / 2) # else, their weight is 1 - corr.
   )
@@ -344,6 +344,10 @@ hypermean <- function(scores, dampingOutliers = TRUE) {
   # not be calculated (e.g. because they gave all proposals the same grade,
   # causing there to be no variability in their judgment).
   revWeights[is.na(revWeights)] <- 0
+  
+  # Then, we set to 1 all weights if they are all set to zero (if we didn't,
+  # an average would not be calculated).
+  if(sum(revWeights) == 0) revWeights = revWeights + 1
   
   # Now it's time to aggregate all score by weighing reviewers.
   aggregatedScores <- c()

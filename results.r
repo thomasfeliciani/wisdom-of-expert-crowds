@@ -141,12 +141,13 @@ rm(asymm, gl, cl, labz, ls, padd, pointer, ps, t, d)
 
 
 # Loading the results data file:
+# (can take a few seconds)
 load(file = "./output/ri.RData")
 
 ri$aggrRule <- factor(
   ri$aggrRule,
   levels = rev(c(
-  "median", "mean","hypermean", "majority judgment",
+  "median", "mean", "trimmed mean", "hypermean", "majority judgment",
   "lowest score", "Borda count", "null"))
 )
 
@@ -240,7 +241,8 @@ dev.off()
 rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
 dft <- rii[,c(
   "aggrRule",
-  "RankEff10", "RankEff20", "RankEff50"#,
+  "CohensKappa10", "CohensKappa20", "CohensKappa50"
+  #"RankEff10", "RankEff20", "RankEff50"#,
   #"KTDtop10", "KTDtop20", "KTDtop30", "KTDtop40", "KTDtop50",
   #"spearmanTop10", "spearmanTop20", "spearmanTop30",
   #"spearmanTop40", "spearmanTop50"
@@ -249,11 +251,12 @@ dft <- melt(dft, id.vars = "aggrRule")
 
 #dft$aggrRule <- as.factor(dft$aggrRule)
 dft$variable <- as.character(dft$variable)
-dft$variable[dft$variable == "RankEff10"] <- "k=10"
-dft$variable[dft$variable == "RankEff20"] <- "k=20"
-#dft$variable[dft$variable == "RankEff30"] <- "k=30"
-#dft$variable[dft$variable == "RankEff40"] <- "k=40"
-dft$variable[dft$variable == "RankEff50"] <- "k=50"
+#dft$variable[dft$variable == "RankEff10"] <- "k=10"
+#dft$variable[dft$variable == "RankEff20"] <- "k=20"
+#dft$variable[dft$variable == "RankEff50"] <- "k=50"
+dft$variable[dft$variable == "CohensKappa10"] <- "k=10"
+dft$variable[dft$variable == "CohensKappa20"] <- "k=20"
+dft$variable[dft$variable == "CohensKappa50"] <- "k=50"
 #dft$aggrRule <- factor(
 #  dft$aggrRule,
 #  levels = rev(levels(dft$aggrRule))
@@ -277,12 +280,12 @@ ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
     fill = "gray30", color = "black", width = 0.6) +
   ggtitle(
     "choice performance",
-    subtitle = "(proportion of best k correctly chosen from 100)") +
+    subtitle = "(Cohen's Kappa)") +
   scale_x_discrete(
     position = "bottom", #top
     limits = rev(levels(dft$aggrRule))) +
   scale_y_continuous(
-    limits = c(0,1),
+    #limits = c(0,1),
     #breaks = seq(from = 0, to = 1, by = 0.2),
     expand = c(0,0)
   ) +
@@ -328,7 +331,7 @@ rii <- subset(
 rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
 dft <- rii[,c(
   "aggrRule", "nReviewersPerProp", "competence", 
-  "Spearman", "RankEff20"#, "RankEff30", "RankEff40", "RankEff50"#,
+  "Spearman", "CohensKappa20"#"RankEff20","RankEff30", RankEff40","RankEff50",
   #"KTDtop10", "KTDtop20", "KTDtop30", "KTDtop40", "KTDtop50",
   #"spearmanTop10", "spearmanTop20", "spearmanTop30",
   #"spearmanTop40", "spearmanTop50"
@@ -337,8 +340,8 @@ dft <- melt(dft, id.vars = c("aggrRule", "nReviewersPerProp", "competence"))
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_5.", exportFormat),
-  width = 1600,
-  height = 2200,
+  width = 1700,
+  height = 2500,
   units = "px",
   res = 300
 )
@@ -359,7 +362,7 @@ ggplot(
     labeller = labeller(
       variable = as_labeller(c(
         "Spearman" = "ranking\nperformance",
-        "RankEff20" = "choice\nperformance (k=20)"
+        "CohensKappa20" = "choice performance\n(Cohen's Kappa, k=20)"
       ))
     )
   ) +
@@ -405,7 +408,7 @@ rii <- subset(
 )
 dft <- rii[,c(
   "aggrRule", "scale",
-  "Spearman", "RankEff20"#, "RankEff30", "RankEff40", "RankEff50"#,
+  "Spearman", "CohensKappa20"#,"RankEff20","RankEff30","RankEff40", RankEff50",
   #"KTDtop10", "KTDtop20", "KTDtop30", "KTDtop40", "KTDtop50",
   #"spearmanTop10", "spearmanTop20", "spearmanTop30",
   #"spearmanTop40", "spearmanTop50"
@@ -414,7 +417,7 @@ dft <- melt(dft, id.vars = c("aggrRule", "scale"))
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_6.", exportFormat),
-  width = 1600,
+  width = 1650,
   height = 2000,
   units = "px",
   res = 300
@@ -433,7 +436,7 @@ ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
     position = "bottom", #top
     limits = rev(levels(dft$aggrRule))) +
   scale_y_continuous(
-    limits = c(0,1),
+    #limits = c(0,1),
     #breaks = seq(from = 0, to = 1, by = 0.2),
     expand = c(0,0)
   ) +
@@ -444,8 +447,8 @@ ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
         "2" = "L=2", "5" = "L=5", "10" = "L=10", "20" = "L=20"
       )),
       variable = as_labeller(c(
-        "Spearman" = "ranking performance",
-        "RankEff20" = "choice performance (k=20)"
+        "Spearman" = "\nranking performance",
+        "CohensKappa20" = "choice performance\n(Cohen's Kappa, k=20)"
       ))
     )
   ) +
@@ -486,7 +489,7 @@ rii <- subset(
 )
 dft <- rii[,c(
   "aggrRule", "scale",
-  "Spearman", "RankEff20"#, "RankEff30", "RankEff40", "RankEff50"#,
+  "Spearman", "CohensKappa20"#"RankEff20","RankEff30","RankEff40","RankEff50",
   #"KTDtop10", "KTDtop20", "KTDtop30", "KTDtop40", "KTDtop50",
   #"spearmanTop10", "spearmanTop20", "spearmanTop30",
   #"spearmanTop40", "spearmanTop50"
@@ -495,7 +498,7 @@ dft <- melt(dft, id.vars = c("aggrRule", "scale"))
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_7.", exportFormat),
-  width = 1600,
+  width = 1650,
   height = 2000,
   units = "px",
   res = 300
@@ -514,7 +517,7 @@ ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
     position = "bottom", #top
     limits = rev(levels(dft$aggrRule))) +
   scale_y_continuous(
-    limits = c(0,1),
+    #limits = c(0,1),
     #breaks = seq(from = 0, to = 1, by = 0.2),
     expand = c(0,0)
   ) +
@@ -528,8 +531,8 @@ ggplot(dft, aes(y = value, x = aggrRule, fill = aggrRule)) +
         "2" = "L=2", "5" = "L=5", "10" = "L=10", "20" = "L=20"
       )),
       variable = as_labeller(c(
-        "Spearman" = "ranking performance",
-        "RankEff20" = "choice performance (k=20)"
+        "Spearman" = "\nranking performance",
+        "CohensKappa20" = "choice performance\n(Cohen's Kappa, k=20)"
       ))
     )
   ) +
@@ -577,7 +580,7 @@ rii <- subset(
 rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
 dft <- rii[,c(
   "aggrRule", "glh", "competence", 
-  "Spearman", "RankEff20"#, "RankEff30", "RankEff40", "RankEff50"#,
+  "Spearman", "CohensKappa20"#"RankEff20","RankEff30","RankEff40","RankEff50",
   #"KTDtop10", "KTDtop20", "KTDtop30", "KTDtop40", "KTDtop50",
   #"spearmanTop10", "spearmanTop20", "spearmanTop30",
   #"spearmanTop40", "spearmanTop50"
@@ -586,7 +589,7 @@ dft <- melt(dft, id.vars = c("aggrRule", "glh", "competence"))
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_8.", exportFormat),
-  width = 1600,
+  width = 1700,
   height = 2200,
   units = "px",
   res = 300
@@ -608,7 +611,7 @@ ggplot(
     labeller = labeller(
       variable = as_labeller(c(
         "Spearman" = "ranking\nperformance",
-        "RankEff20" = "choice\nperformance (k=20)"
+        "CohensKappa20" = "choice performance\n(Cohen's Kappa, k=20)"
       ))
     )
   ) +

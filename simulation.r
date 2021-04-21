@@ -3,6 +3,7 @@
 
 # Loading auxiliary functions:
 source("./util.r")
+library("irr", include.only = "kappa2")
 
 # The most important argument in this function is the criteria data.frame,
 simulation <- function (
@@ -25,20 +26,21 @@ simulation <- function (
   aggrRule = c(
     "control",
     "mean",
+    "excludeExtremes",
     "hypermean",
     "lowestScore",
     "median",
     "majorityJudgement",
     "bordaCount"),
   nAccepted = c(5, 10),
-  seed = runif(1, -999999999, 999999999)
+  seed = runif(1, -999999999, 999999999),
+  debug = FALSE
 )
 {
   # Setting random seed:
   set.seed(seed)
   if (any(nAccepted > nSubmissions)){warning(
-    "Please review parameter nAccepted: one or
-    more values are higher than the number of submissions.")}
+    "Parameter nAccepted cannot be higher than nSubmissions.")}
   
   # Saving the parameter configuration into an object:
   parameters <- list(
@@ -52,6 +54,7 @@ simulation <- function (
     seed = seed,
     timestamp = as.character(Sys.time())
   )
+  if (debug) print(parameters)
   #nEvaluationCriteria <- nrow(criteria)
   
   # Creating submissions. We fill in the true quality for each attribute,
@@ -112,7 +115,7 @@ simulation <- function (
   # belongs to.
   gradeLanguages <- list()
   for (c in 1:nrow(criteria)){
-    gradeLanguage <- createGradeLanguage(
+    gradeLanguages <- createGradeLanguage(
       scholars = reviewers,
       criterion = criteria[c,]
     )
@@ -135,7 +138,7 @@ simulation <- function (
         submissions$trueQuality[prop] + reviewers$bias[rev],
       sd = reviewers$error[rev],
       rule = "quality",
-      thresholds = gradeLanguage[[rev]],
+      thresholds = gradeLanguages[[rev]],
       categories = criteria$scale # Fix in case of combinatorial aggregation
     )
   }}
@@ -149,6 +152,8 @@ simulation <- function (
   
   # Then, for each of the aggregation rules...
   for(rule in 1:length(aggrRule)){
+    if (debug) print(aggrRule[rule])
+    
     
     # ... we calculate the aggregate score for each proposal (x) ...
     if (
@@ -174,7 +179,7 @@ simulation <- function (
             submissions$trueQuality[prop] + reviewers$bias[sampleReviewer],
           sd = reviewers$error[sampleReviewer],
           rule = "quality",
-          thresholds = gradeLanguage[[sampleReviewer]],
+          thresholds = gradeLanguages[[sampleReviewer]],
           categories = criteria$scale
         )
       }
@@ -275,7 +280,8 @@ simulation <- function (
     # not on top according to the estimated ranking.
     # Note that, despite the underlying strict ordering, the way we calculate
     # this measure is equivalent to assuming a weak ordering of submissions.
-    rankingEfficacy <- c()
+    rankingEfficacy <- CohensKappa <- c()
+    confusionMatrix <- list()
     #rankingEfficacy <- oRankingEfficacy <- c()
     
     # For every value of k (nAccepted) that we explore: 
@@ -291,11 +297,14 @@ simulation <- function (
       # The list of proposals that deserve funding: those that have a true
       # quality at least equal to that of the k-th proposal in the merit
       # ranking.
-      acceptableOnes <- which(submissions$trueQuality >= thT)
+      acceptableLogic <- submissions$trueQuality >= thT
+      acceptableOnes <- which(acceptableLogic)
       
       
-      # Submissions above the equivalence class of the k-th best:
-      nonDiscretionaryPanelChoice <- which(x > thE)
+      # Submissions above the equivalence class of the k-th best (We'll deal
+      # with the equivalence class x==thE right after):
+      surelyAcceptedLogic <- x > thE
+      nonDiscretionaryPanelChoice <- which(surelyAcceptedLogic)
       A <- length(nonDiscretionaryPanelChoice)
       
       # How many of these are right:
@@ -303,7 +312,8 @@ simulation <- function (
       
       # Submissions in k-th equivalence class (i.e. the discretionary
       # component of panel's choice):
-      kthEquivClass <- which(x == thE)
+      maybeAcceptedLogic <- x == thE
+      kthEquivClass <- which(maybeAcceptedLogic)
       B <- length(kthEquivClass)
       
       # Of which, these many are right:
@@ -311,6 +321,63 @@ simulation <- function (
       
       # Choice performance for this level of k is:
       rankingEfficacy[a] <- (((k - A) * (B1 / B)) + A1) / k
+      
+      # We also calculate Cohen's Kappa to correct for the probability that
+      # the panel chooses the correct submissions by chance.
+      # For the panel decision, there might be ties in the kth equivalence
+      # class. If so, we calculate Kappa for each of the possible selections
+      # the panel can make in that class, and then we average across all
+      # alternatives.
+      if (B > 1) { # If there are more than 1 proposal tieing for k...
+        
+        # The panel picks random proposals from the equivalence class until it
+        # has k:
+        randomPick <- sample(kthEquivClass, size = k - A, replace = FALSE)
+        panelChoice <- surelyAcceptedLogic# | maybeAcceptedLogic
+        panelChoice[randomPick] <- TRUE
+        
+        CohensKappa[a] <- irr::kappa2(as.matrix(cbind(
+          acceptableLogic, panelChoice
+        )))$value
+        
+        confusionMatrix[[a]] <- as.matrix(table(acceptableLogic, panelChoice))
+      #  confusionMatrix[[a]] <- list()
+      #  Kappas <- c()
+      #  
+      #  # All possible ways the panel can solve the ties for the kth position and
+      #  # thus select exactly k submissions:
+      #  solutions <- t(combn(x = kthEquivClass, m = k - A)) ####################
+      #  
+      #  # Calculaing what Kappa would be for each of these solutions:
+      #  for (sol in 1:nrow(solutions)) {
+      #    
+      #    # We add a choice from the kth equivalence class:
+      #    panelChoice <- surelyAcceptedLogic
+      #    panelChoice[solutions[sol,]] <- TRUE
+      #    
+      #    # And we calculate the Kappa resulting from that choice:
+      #    Kappas[sol] <- irr::kappa2(
+      #      as.matrix(cbind(acceptableLogic, panelChoice))
+      #    )$value
+      #    
+      #    confusionMatrix[[a]][[sol]] <- as.matrix(table(
+      #      acceptableLogic, panelChoice
+      #    ))
+      #  }
+      #  
+      #  # Then, our final Kappa is the average across all the alternative
+      #  # solutions:
+      #  CohensKappa[a] <- mean(Kappas)
+        
+      } else { # Instead, if there are no ties in kth equivalence class:
+        panelChoice <- surelyAcceptedLogic | maybeAcceptedLogic
+        CohensKappa[a] <- irr::kappa2(as.matrix(cbind(
+          acceptableLogic, panelChoice
+        )))$value
+        
+        confusionMatrix[[a]] <- as.matrix(table(acceptableLogic, panelChoice))
+      }
+      
     }
     
     # For the next outcome metrics, we need to have the weak orderings of
@@ -380,9 +447,11 @@ simulation <- function (
     outcomeMetrics <- list(
       
       # First, the measures that compare panel judgment with true merit:
-      #bayesEfficacy = bayesEfficacy, 
+      #bayesEfficacy = bayesEfficacy,
+      confusionMatrix = confusionMatrix,
       qualityEfficacy = qualityEfficacy,
       rankingEfficacy = rankingEfficacy,
+      CohensKappa = CohensKappa,
       ktd = ktd,
       ktdTop = ktdTop,
       spearmanTop = spearmanTop,
@@ -450,8 +519,9 @@ sim <- simulation (
     "bordaCount",
     "control"
   ),
-  nAccepted = c(10, 20, 30, 40),
-  seed = sample(-999999:999999, size = 1)
+  nAccepted = c(1:10 * 5),
+  seed = 1234,#sample(-999999:999999, size = 1)
+  debug = FALSE
 )
 #
 #
