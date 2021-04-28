@@ -73,7 +73,7 @@ runBattery <- function(nRepetitions, debug = FALSE){
   
   
   # Here we run the actual simulation battery (it can take a long time):
-  #for (b in 1:10) { # For all parameter combinations...
+  #for (b in 1:10) { # For all parameter combinations... #######################
   for (b in 1:nrow(battery)) { # For all parameter combinations...
     print(paste0(
       "Running parameter combination ", b,
@@ -146,6 +146,9 @@ runBattery <- function(nRepetitions, debug = FALSE){
         for (n in 1:length(r$parameters$nAccepted)){
           df[1,paste0("RankEff",r$parameters$nAccepted[n])] <- 
             results$rankingEfficacy[n]
+          
+          df[1,paste0("AUC",r$parameters$nAccepted[n])] <- 
+            results$auc[n]
           
           df[1,paste0("CohensKappa",r$parameters$nAccepted[n])] <- 
             results$CohensKappa[n]

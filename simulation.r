@@ -4,6 +4,7 @@
 # Loading auxiliary functions:
 source("./util.r")
 library("irr", include.only = "kappa2")
+library("AUC", include.only = c("roc", "auc"))
 
 # The most important argument in this function is the criteria data.frame,
 simulation <- function (
@@ -280,7 +281,7 @@ simulation <- function (
     # not on top according to the estimated ranking.
     # Note that, despite the underlying strict ordering, the way we calculate
     # this measure is equivalent to assuming a weak ordering of submissions.
-    rankingEfficacy <- CohensKappa <- c()
+    rankingEfficacy <- auc <- CohensKappa <- c()
     confusionMatrix <- list()
     #rankingEfficacy <- oRankingEfficacy <- c()
     
@@ -321,6 +322,14 @@ simulation <- function (
       
       # Choice performance for this level of k is:
       rankingEfficacy[a] <- (((k - A) * (B1 / B)) + A1) / k
+      
+      # ROC AUC
+      auc[a] <- AUC::auc(
+        AUC::roc(
+          labels = as.factor(as.numeric(acceptableLogic)),
+          predictions = x),
+        min = 0, max = 1
+      )
       
       # We also calculate Cohen's Kappa to correct for the probability that
       # the panel chooses the correct submissions by chance.
@@ -451,6 +460,7 @@ simulation <- function (
       confusionMatrix = confusionMatrix,
       qualityEfficacy = qualityEfficacy,
       rankingEfficacy = rankingEfficacy,
+      auc = auc,
       CohensKappa = CohensKappa,
       ktd = ktd,
       ktdTop = ktdTop,
