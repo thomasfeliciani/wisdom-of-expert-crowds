@@ -144,11 +144,14 @@ rm(asymm, gl, cl, labz, ls, padd, pointer, ps, t, d)
 # (can take a few seconds)
 load(file = "./output/ri.RData")
 
+ri$aggrRule[ri$aggrRule == "highestScore"] <- "highest score" ##################
+
+
 ri$aggrRule <- factor(
   ri$aggrRule,
   levels = rev(c(
   "median", "mean", "trimmed mean", "hypermean", "majority judgment",
-  "lowest score", "Borda count", "null"))
+  "lowest score", "highest score", "Borda count", "null"))
 )
 
 
@@ -877,7 +880,7 @@ smallBattery <- function(nSubmissions = 100, sigma = 0.2) {
       " of ", nrow(battery), ". Time: ", Sys.time() 
     ))
     
-    for (rep in 1:nRepetitions){ # and for as many times as we need repetitions...
+    for (rep in 1:nRepetitions){ # and for as many times as we need repetitions:
       
       alpha <- beta <- 1
       if (battery$tqd[b] == "symmetric bell") {
@@ -905,7 +908,7 @@ smallBattery <- function(nSubmissions = 100, sigma = 0.2) {
         ), 
         nSubmissions = battery$nSubmissions[b],
         nReviewersPerProp = battery$nReviewersPerProp[b],
-        nPropPerReviewer = battery$nSubmissions[b],# All reviewers review all prop
+        nPropPerReviewer = battery$nSubmissions[b],# complete review network
         reviewerError = battery$reviewerError[b],
         reviewerVariability = sigma,
         aggrRule = aggrRule,
@@ -967,7 +970,7 @@ smallBattery <- function(nSubmissions = 100, sigma = 0.2) {
   }
   
   
-  # Merging data into one data.frame______________________________________________
+  # Merging data into one data.frame____________________________________________
   for (d in 1:length(ri)){
     ifelse(d == 1, temp <- ri[[d]], temp <- rbind(temp, ri[[d]]))
   }
@@ -1187,3 +1190,213 @@ plotChoicePerf(ri)
 
 
 } ###############
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+# Loading the results data file:
+# (can take a few seconds)
+load(file = "./output/ri.RData")
+
+ri$aggrRule[ri$aggrRule == "highestScore"] <- "highest score" ##################
+
+
+ri$aggrRule <- factor(
+  ri$aggrRule,
+  levels = rev(c(
+    "mean", "trimmed mean", "hypermean", "median", "majority judgment", 
+    "Borda count", "lowest score", "null", "highest score"))
+)
+
+
+#colorScheme = "A" # we'll use this palette from Viridis
+#
+#
+# Selecting the variables we need from the baseline runs:
+# Subsetting the runs from the baseline parameter configuration:
+#ri$family <- NA
+ri$family[
+  ri$aggrRule %in% c("null", "highest score", "lowest score")] <- "benchmark"
+ri$family[
+  ri$aggrRule %in% c("mean", "trimmed mean", "hypermean")] <- "cardinal"
+ri$family[
+  ri$aggrRule %in% c("median","majority judgment","Borda count")] <- "ordinal"
+ri$family <- factor(ri$family, levels = c("cardinal", "ordinal", "benchmark"))
+
+palette <- viridisLite::viridis(
+  n = 11, begin = 0.2, end = 1, alpha = 1, direction = -1, option = "A")
+
+#ri$color[ri$aggrRule == "mean"] <- palette[1] 
+#ri$color[ri$aggrRule == "trimmed mean"] <- palette[2] 
+#ri$color[ri$aggrRule == "hypermean"] <- palette[3] 
+#ri$color[ri$aggrRule == "median"] <- palette[6] 
+#ri$color[ri$aggrRule == "majority judgment"] <- palette[7] 
+#ri$color[ri$aggrRule == "Borda count"] <- palette[8] 
+#ri$color[ri$aggrRule == "lowest score"] <- palette[11] 
+#ri$color[ri$aggrRule == "null"] <- palette[12] 
+#ri$color[ri$aggrRule == "highest score"] <- palette[13] 
+
+
+
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$aggrRule %in% c("mean", "null", "lowest score", "highest score") & ###
+    ri$scale == 5 &
+    ri$glh == 0.05 &                     ###
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8
+)
+rii$aggrRule <- factor(
+  rii$aggrRule,
+  levels = rev(
+    levels(ri$aggrRule)[levels(ri$aggrRule) %in% unique(rii$aggrRule)])
+)
+
+# Selecting the variables we need from the baseline runs:
+#rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
+dft <- rii[,c(
+  "aggrRule", "family",# "color",
+  "CohensKappa10", "CohensKappa20", "CohensKappa50"
+  #"RankEff10", "RankEff20", "RankEff50"#,
+  #"KTDtop10", "KTDtop20", "KTDtop30", "KTDtop40", "KTDtop50",
+  #"spearmanTop10", "spearmanTop20", "spearmanTop30",
+  #"spearmanTop40", "spearmanTop50"
+)]
+dft <- melt(dft, id.vars = c("aggrRule", "family"))
+
+dft$variable <- as.character(dft$variable)
+dft$variable[dft$variable == "CohensKappa10"] <- "k=10"
+dft$variable[dft$variable == "CohensKappa20"] <- "k=20"
+dft$variable[dft$variable == "CohensKappa50"] <- "k=50"
+#dft$aggrRule <- factor(
+#  dft$aggrRule,
+#  levels = levels(ri$aggrRule))
+#)
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_4.", exportFormat),
+  width = 1600,
+  height = 1100,
+  units = "px",
+  res = 300
+)
+#if(exportFormat == "png") {do.call(png, figureParameters)} else {
+#  do.call(tiff, figureParameters)}
+
+ggplot(dft, aes(y = value, x = family, fill = aggrRule, color = aggrRule)) +
+  geom_violin(
+    #fill = "gray60"#, color = "gray60",
+    position =  position_dodge()
+  ) +
+  geom_boxplot(
+    color = "black", alpha = 0.2, width = 0.4,
+    position = position_dodge(width = 0.9)
+    #position_dodge2(width = 0.9, preserve = "single")
+  ) +
+  #geom_boxplot( # overplotting the control condition
+  #  data = dft[dft$aggrRule == "null",],
+  #  fill = "gray30", color = "black", width = 0.6) +
+  ggtitle(
+    "choice performance",
+    subtitle = "(Cohen's Kappa)") +
+  scale_x_discrete(
+    position = "bottom"#,
+    #limits = levels(dft$family)
+  ) +
+  scale_y_continuous(
+    #limits = c(0,1),
+    #breaks = seq(from = 0, to = 1, by = 0.2),
+    expand = c(0,0)
+  ) +
+  facet_wrap("variable", nrow = 1, scales = "free_x") +
+  scale_fill_manual(values = palette[c(1, 9, 10, 11)]) +
+  scale_color_manual(values = palette[c(1, 9, 10, 11)]) +
+  #scale_fill_viridis(begin = 0, discrete = TRUE, option = colorScheme) +
+  theme(
+    plot.title = element_text(size=14),
+    plot.subtitle = element_text(size=12),
+    plot.title.position = "panel",
+    panel.background = element_rect(fill="gray96"),
+    plot.background = element_rect(fill="transparent", color=NA),
+    panel.border = element_rect(fill="transparent", color="gray50"),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1, "lines"),
+    strip.background = element_rect(fill="transparent"),
+    strip.text.y.left = element_text(angle = 0),
+    axis.line = element_blank(),
+    axis.title = element_blank(),
+    #axis.text.x = element_text(angle = 50, hjust = 1),
+    legend.position = "top",
+    legend.background = element_rect(fill = "transparent",color=NA),
+    legend.box.background = element_rect(fill = "transparent",color=NA),
+    text = element_text(size = 15)
+  )
+
+
+# ______________________________________________________________________________
+
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    #ri$aggrRule %in% c("mean", "null", "lowest score", "highest score") & ###
+    #ri$scale == 5 &
+    ri$glh == 0.05 &                     ###
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8
+)
+rii$aggrRule <- factor(
+  rii$aggrRule,
+  levels = rev(
+    levels(ri$aggrRule)[levels(ri$aggrRule) %in% unique(rii$aggrRule)])
+)
+
+
+#if(exportFormat == "png") {do.call(png, figureParameters)} else {
+#  do.call(tiff, figureParameters)}
+
+ggplot(
+  rii,
+  aes(y = CohensKappa20, x = family, fill = aggrRule, color = aggrRule)
+) +
+  geom_violin(position =  position_dodge()) +
+  geom_boxplot(
+    color = "black", alpha = 0.2, width = 0.4,
+    position = position_dodge(width = 0.9)
+  ) +
+  scale_x_discrete(position = "bottom") +
+  scale_y_continuous(expand = c(0,0)) +
+  facet_wrap("scale", ncol = 1) +#, scales = "free_x") +
+  scale_fill_manual(values = palette[c(1:3, 5:7, 9:11)]) +
+  scale_color_manual(values = palette[c(1:3, 5:7, 9:11)]) +
+  #scale_fill_viridis(begin = 0, discrete = TRUE, option = colorScheme) +
+  theme(
+    plot.title = element_text(size=14),
+    plot.subtitle = element_text(size=12),
+    plot.title.position = "panel",
+    panel.background = element_rect(fill="gray96"),
+    plot.background = element_rect(fill="transparent", color=NA),
+    panel.border = element_rect(fill="transparent", color="gray50"),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1, "lines"),
+    strip.background = element_rect(fill="transparent"),
+    strip.text.y.left = element_text(angle = 0),
+    axis.line = element_blank(),
+    axis.title = element_blank(),
+    #axis.text.x = element_text(angle = 50, hjust = 1),
+    legend.position = "right",
+    legend.background = element_rect(fill = "transparent",color=NA),
+    legend.box.background = element_rect(fill = "transparent",color=NA),
+    text = element_text(size = 15)
+  )

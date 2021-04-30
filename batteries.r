@@ -200,6 +200,7 @@ runBattery <- function(nRepetitions, debug = FALSE){
   #ri$aggrRule[ri$aggrRule == "bordaCountExtended"] <- "Borda count ext."
   ri$aggrRule[ri$aggrRule == "excludeExtremes"] <- "trimmed mean"
   ri$aggrRule[ri$aggrRule == "lowestScore"] <- "lowest score"
+  ri$aggrRule[ri$aggrRule == "highestScore"] <- "highest score"
   ri$aggrRule[ri$aggrRule == "majorityJudgement"] <- "majority judgment"
   ri$aggrRule[ri$aggrRule == "control"] <- "null"
   ri$aggrRule[is.na(ri$aggrRule)] <- "null"
