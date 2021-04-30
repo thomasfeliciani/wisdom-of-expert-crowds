@@ -74,7 +74,7 @@ createGradeLanguage <- function(
       gradeLanguages[[i]][l] <- truncate(rnorm( # Equation 3
         n = 1,
         mean = thresholds[l],
-        sd = criterion$glh * (1 - ((l - 1) / criterion$scale))
+        sd = criterion$glh# * (1 - ((l - 1) / criterion$scale))
       ))
     }
     
@@ -399,6 +399,11 @@ aggregate <- function (
   if (rule == "lowestScore"){
     for (i in 1:nrow(scores)){aggregatedScores[i] <- 
       min(scores[i,], na.rm = TRUE)}
+  }
+  
+  if (rule == "highestScore"){
+    for (i in 1:nrow(scores)){aggregatedScores[i] <- 
+      max(scores[i,], na.rm = TRUE)}
   }
   
   if (rule == "excludeExtremes"){

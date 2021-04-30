@@ -4,7 +4,7 @@
 # Loading auxiliary functions:
 source("./util.r")
 library("irr", include.only = "kappa2")
-library("AUC", include.only = c("roc", "auc"))
+suppressMessages(library("AUC", include.only = c("roc", "auc")))
 
 # The most important argument in this function is the criteria data.frame,
 simulation <- function (
@@ -30,6 +30,7 @@ simulation <- function (
     "excludeExtremes",
     "hypermean",
     "lowestScore",
+    "highestScore",
     "median",
     "majorityJudgement",
     "bordaCount"),
@@ -281,7 +282,7 @@ simulation <- function (
     # not on top according to the estimated ranking.
     # Note that, despite the underlying strict ordering, the way we calculate
     # this measure is equivalent to assuming a weak ordering of submissions.
-    rankingEfficacy <- auc <- CohensKappa <- c()
+    rankingEfficacy <- auc <- CohensKappa <- c()# aucReject <- c()
     confusionMatrix <- list()
     #rankingEfficacy <- oRankingEfficacy <- c()
     
@@ -330,6 +331,13 @@ simulation <- function (
           predictions = x),
         min = 0, max = 1
       )
+      
+      #aucReject[a] <- AUC::auc(
+      #  AUC::roc(
+      #    labels = as.factor(as.numeric(!acceptableLogic)),
+      #    predictions = x),
+      #  min = 0, max = 1
+      #)
       
       # We also calculate Cohen's Kappa to correct for the probability that
       # the panel chooses the correct submissions by chance.
@@ -442,8 +450,8 @@ simulation <- function (
     
     # Sometimes it can happen that all proposals get the same aggregate score
     # and ranking position (e.g. when there are very few proposals, or when
-    # the aggregation rule is lowestScore and there is a large number of
-    # reviewers). When this happens, the correlation cannot be calculated
+    # the aggregation rule is lowest/highest score and there is a large number
+    # of reviewers). When this happens, the correlation cannot be calculated
     # because one of the variables has no variability.
     # We interpret this as evidence that the aggregation rule performed
     # exceptionally poorly. For this reason, we replace the missing value
@@ -461,6 +469,7 @@ simulation <- function (
       qualityEfficacy = qualityEfficacy,
       rankingEfficacy = rankingEfficacy,
       auc = auc,
+      #aucReject = aucReject,
       CohensKappa = CohensKappa,
       ktd = ktd,
       ktdTop = ktdTop,
@@ -524,6 +533,7 @@ sim <- simulation (
     "mean",
     "excludeExtremes",
     "lowestScore",
+    "highestScore",
     "median",
     "majorityJudgement",
     "bordaCount",

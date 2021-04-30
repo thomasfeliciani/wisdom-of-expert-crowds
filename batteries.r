@@ -17,11 +17,11 @@ runBattery <- function(nRepetitions, debug = FALSE){
   #
   # We start with the variables that will vary *between* simulations: 
   tqd <- c ("top skew", "bottom skew") #"symmetric bell",
-  scale <- c(2,5,10,20)
-  glh <- c(0, 0.05, 0.1, 0.2)#0:4/20#0:8/40
+  scale <- c(3,5,7)
+  glh <- c(0, 0.05, 0.1)#0:4/20#0:8/40
   nSubmissions <- c(100)
   nReviewersPerProp <- 2:13
-  reviewerCompetence <- c(1, 0.9, 0.8, 0.6)
+  reviewerCompetence <- c(1, 0.8, 0.6)
   battery <- expand.grid(
     tqd = tqd,
     scale = scale,
@@ -38,6 +38,7 @@ runBattery <- function(nRepetitions, debug = FALSE){
     "excludeExtremes",
     "hypermean",
     "lowestScore",
+    "highestScore",
     "median",
     "majorityJudgement",
     "bordaCount"
@@ -65,6 +66,7 @@ runBattery <- function(nRepetitions, debug = FALSE){
     "excludeExtremes" = temp,
     "hypermean" = temp,
     "lowestScore" = temp,
+    "highestScore" = temp,
     "median" = temp,
     "majorityJudgement" = temp,
     "bordaCount" = temp
@@ -214,7 +216,7 @@ runBattery <- function(nRepetitions, debug = FALSE){
 
 
 # Running simulations in parallel ______________________________________________
-parallelExecutions <- 100
+parallelExecutions <- 200
 nRepetitions <- 1 # repetitions per execution
 
 # runBattery(nRepetitions, debug = TRUE)
