@@ -69,12 +69,20 @@ simulation <- function (
       shape2 = criteria$beta
     )
   )
-
+  
+  # Based on their trueQuality, we calculate what grade they deserve in the
+  # specified grading language:
+  thresholds <- createTrueGradeLanguage(
+    granularity = criteria$scale,
+    type = criteria$gradeLanguage
+  )
+  submissions$trueGrade <- findInterval(submissions$trueQuality, thresholds)
   
   # Next, we calculate, for each submission, what would be the true ranking
-  # position of the submissions.
+  # position of the submissions. We assume a strict ordering for now, so we
+  # break all ties that occur.
   submissions$trueRanking <- rank(
-    1 - submissions$trueQuality, # "1 -" allows to get low ranking number when
+    1 - submissions$trueGrade,   # "1 -" allows to get low ranking number when
     na.last = "keep",            # the true quality is high.
     ties.method = "first"
   )
@@ -104,24 +112,25 @@ simulation <- function (
       n = nReviewers, mean = reviewerError, sd = reviewerVariability)),
     bias = rep(reviewerBias, times = nReviewers)
   )
-  if(reviewerBias == "random") {
-    reviewers$bias <- NULL
-    reviewers$bias <- runif(min = -0.2, max = 0.2, n = nReviewers)
-  }
+  #if(reviewerBias == "random") {
+  #  reviewers$bias <- NULL
+  #  reviewers$bias <- runif(min = -0.2, max = 0.2, n = nReviewers)
+  #}
   
   # Next, we give each reviewer a grade language interpretation - that is, a
   # vector of thresholds that determine how the continuous evaluation scale
   # is to be discretized. 
-  # For practicality, we store all these values in lists, one per evaluation
-  # criterion, and whose index identifies the reviewer the grade language
-  # belongs to.
-  gradeLanguages <- list()
-  for (c in 1:nrow(criteria)){
-    gradeLanguages <- createGradeLanguage(
-      scholars = reviewers,
-      criterion = criteria[c,]
-    )
-  }
+  gradeLanguages <- createGradeLanguage(
+    scholars = reviewers,
+    criterion = criteria
+  )
+  #gradeLanguages <- list()
+  #for (c in 1:nrow(criteria)){
+  #  gradeLanguages <- createGradeLanguage(
+  #    scholars = reviewers,
+  #    criterion = criteria[c,]
+  #  )
+  #}
   
   # Now we have all we need for reviewers to rate the submissions.
   # Each reviewer is going to rate the submission she's assigned to, giving a
@@ -238,8 +247,8 @@ simulation <- function (
       # Deserving proposals (deserved == TRUE) are here defined as the proposals
       # whose objective grade is equal to or higher than the true quality of the
       # proposals on the cutoff threhsold.
-      tqDeserved[[a]] <- submissions$trueQuality >=
-        submissions[submissions$trueRanking==nAccepted[a],]$trueQuality
+      tqDeserved[[a]] <- submissions$trueGrade >=
+        submissions[submissions$trueRanking == nAccepted[a],]$trueGrade
       
       # Estimated is set to TRUE for all proposals whose estimated quality is 
       # equal to or greater than the estimated quality of the proposal on the 
@@ -272,7 +281,7 @@ simulation <- function (
     ifelse(
       aggrRule[rule] %in% c("majorityJudgement", "bordaCount"),
       qualityEfficacy <- NA,
-      qualityEfficacy <- 1 - mean(abs(submissions$trueQuality - x))
+      qualityEfficacy <- 1 - mean(abs(submissions$trueGrade - x))
     )
     #oQualityEfficacy <- 1 - mean(abs(ox - x))
     
@@ -282,7 +291,7 @@ simulation <- function (
     # not on top according to the estimated ranking.
     # Note that, despite the underlying strict ordering, the way we calculate
     # this measure is equivalent to assuming a weak ordering of submissions.
-    rankingEfficacy <- auc <- CohensKappa <- c()# aucReject <- c()
+    rankingEfficacy <- auc <- CohensKappa <- typeIperf <- typeIIperf <- c()
     confusionMatrix <- list()
     #rankingEfficacy <- oRankingEfficacy <- c()
     
@@ -290,8 +299,8 @@ simulation <- function (
     for (a in 1:length(nAccepted)){
       k = nAccepted[a]
       
-      # The true quality of the the k-th best in the merit ranking:
-      thT <- submissions$trueQuality[submissions$trueRanking == k]
+      # The deserved grade of the the k-th best in the merit ranking:
+      thT <- submissions$trueGrade[submissions$trueRanking == k]
       
       # The quality of the k-th best in the panel ranking:
       thE <- x[xr == k]
@@ -299,7 +308,7 @@ simulation <- function (
       # The list of proposals that deserve funding: those that have a true
       # quality at least equal to that of the k-th proposal in the merit
       # ranking.
-      acceptableLogic <- submissions$trueQuality >= thT
+      acceptableLogic <- submissions$trueGrade >= thT
       acceptableOnes <- which(acceptableLogic)
       
       
@@ -325,11 +334,17 @@ simulation <- function (
       rankingEfficacy[a] <- (((k - A) * (B1 / B)) + A1) / k
       
       # ROC AUC
-      auc[a] <- AUC::auc(
-        AUC::roc(
-          labels = as.factor(as.numeric(acceptableLogic)),
-          predictions = x),
-        min = 0, max = 1
+      ifelse(
+        length(table(acceptableLogic)) == 2,
+        # If we have both acceptable and non-acceptable proposals, then AUC is:
+        auc[a] <- AUC::auc(
+          AUC::roc(
+            labels = as.factor(as.numeric(acceptableLogic)),
+            predictions = x),
+          min = 0, max = 1
+        ), 
+        # else, the AUC can't be calculated:
+        auc[a] <- NA 
       )
       
       #aucReject[a] <- AUC::auc(
@@ -345,6 +360,7 @@ simulation <- function (
       # class. If so, we calculate Kappa for each of the possible selections
       # the panel can make in that class, and then we average across all
       # alternatives.
+      panelChoice <- c()
       if (B > 1) { # If there are more than 1 proposal tieing for k...
         
         # The panel picks random proposals from the equivalence class until it
@@ -353,97 +369,84 @@ simulation <- function (
         panelChoice <- surelyAcceptedLogic# | maybeAcceptedLogic
         panelChoice[randomPick] <- TRUE
         
-        CohensKappa[a] <- irr::kappa2(as.matrix(cbind(
-          acceptableLogic, panelChoice
-        )))$value
-        
-        confusionMatrix[[a]] <- as.matrix(table(acceptableLogic, panelChoice))
-      #  confusionMatrix[[a]] <- list()
-      #  Kappas <- c()
-      #  
-      #  # All possible ways the panel can solve the ties for the kth position and
-      #  # thus select exactly k submissions:
-      #  solutions <- t(combn(x = kthEquivClass, m = k - A)) ####################
-      #  
-      #  # Calculaing what Kappa would be for each of these solutions:
-      #  for (sol in 1:nrow(solutions)) {
-      #    
-      #    # We add a choice from the kth equivalence class:
-      #    panelChoice <- surelyAcceptedLogic
-      #    panelChoice[solutions[sol,]] <- TRUE
-      #    
-      #    # And we calculate the Kappa resulting from that choice:
-      #    Kappas[sol] <- irr::kappa2(
-      #      as.matrix(cbind(acceptableLogic, panelChoice))
-      #    )$value
-      #    
-      #    confusionMatrix[[a]][[sol]] <- as.matrix(table(
-      #      acceptableLogic, panelChoice
-      #    ))
-      #  }
-      #  
-      #  # Then, our final Kappa is the average across all the alternative
-      #  # solutions:
-      #  CohensKappa[a] <- mean(Kappas)
-        
       } else { # Instead, if there are no ties in kth equivalence class:
         panelChoice <- surelyAcceptedLogic | maybeAcceptedLogic
-        CohensKappa[a] <- irr::kappa2(as.matrix(cbind(
-          acceptableLogic, panelChoice
-        )))$value
-        
-        confusionMatrix[[a]] <- as.matrix(table(acceptableLogic, panelChoice))
       }
       
+      
+      # Now we can calculate the confusion matrix and its related measures of
+      # performance:
+      confusionMatrix[[a]] <- as.matrix(table(acceptableLogic, panelChoice))
+      
+      CohensKappa[a] <- irr::kappa2(as.matrix(cbind(
+        acceptableLogic, panelChoice
+      )))$value
+      
+      # Info on the margins of the confusion matrix:
+      kmerit <- sum(acceptableLogic)
+      kpanel <- sum(panelChoice)
+      
+      # ... which we use to calculate the type I and type II error performance:
+      falsePositive <- sum(panelChoice & !acceptableLogic)
+      expectFalsePositive <- kmerit * (nSubmissions - kmerit) / nSubmissions
+      typeIperf[a] <- 1 - (falsePositive / expectFalsePositive)
+      
+      falseNegative <- sum(!panelChoice & acceptableLogic)
+      expectFalseNegative <-  kmerit * (nSubmissions - kpanel) / nSubmissions
+      typeIIperf[a] <- 1 - (falseNegative / expectFalseNegative)
     }
     
     # For the next outcome metrics, we need to have the weak orderings of
     # submissions (based on their true quality and estimated quality).
-    weakOrdTrueQuality <- rank(submissions$trueQuality, ties.method = "max")
+    weakOrdTrueGrade <- rank(submissions$trueGrade, ties.method = "max")
     weakOrdEstimQuality <- rank(x, ties.method = "max")
     
     # Now we calculate the normalized Kendall-tau distance between the two
     # weak orderings: based on trueQuality and based on estimated quality (x).
     # The Kendall distance is calculated for the whole ranking (kend), and for
     # the objectively-best proposals only (kendTop).
-    ktd <- kendallTauDistance(
-      weakOrdTrueQuality,
-      weakOrdEstimQuality
-    )$normalized
+    ifelse(
+      length(table(weakOrdTrueGrade)) > 1,
+      ktd <- kendallTauDistance(
+        weakOrdTrueGrade,
+        weakOrdEstimQuality
+      )$normalized,
+      ktd <- NA
+    )
     
-    ktdTop <- c()
-    spearmanTop <- c()
-    for (a in 1:length(nAccepted)){
-      thT <- submissions$trueQuality[submissions$trueRanking == nAccepted[a]]
-      top <- which(submissions$trueQuality >= thT)
-      
-      meritRank <- rank(submissions$trueQuality[top], ties.method = "max")
-      panelRank <- rank(x[top], ties.method = "max")
-      
-      
-      ktdTop[a] <- kendallTauDistance(
-        meritRank,
-        panelRank
-      )$normalized
-
-      spearmanTop[a] <- suppressWarnings(cor(
-        meritRank,
-        panelRank,
-        method = "spearman"
-      ))
-      if (is.na(spearmanTop[a])) {spearmanTop[a] <- 0}
-      
-    }
+    
+    #ktdTop <- c()
+    #spearmanTop <- c()
+    #for (a in 1:length(nAccepted)){
+    #  thT <- submissions$trueGrade[submissions$trueRanking == nAccepted[a]]
+    #  top <- which(submissions$trueGrade >= thT)
+    #  
+    #  meritRank <- rank(submissions$trueGrade[top], ties.method = "max")
+    #  panelRank <- rank(x[top], ties.method = "max")
+    #  
+    #  
+    #  ktdTop[a] <- kendallTauDistance(
+    #    meritRank,
+    #    panelRank
+    #  )$normalized
+    #
+    #  spearmanTop[a] <- suppressWarnings(cor(
+    #    meritRank,
+    #    panelRank,
+    #    method = "spearman"
+    #  ))
+    #  if (is.na(spearmanTop[a])) {spearmanTop[a] <- 0}
+    #}
     
     # We also calculate two correlation coefficients for the two rankings:
     ktc <- suppressWarnings(cor(
-      weakOrdTrueQuality,
+      weakOrdTrueGrade,
       weakOrdEstimQuality,
       method = "kendall"
     ))
 
     spearman <- suppressWarnings(cor(
-      submissions$trueQuality,
+      submissions$trueGrade,
       x,
       method = "spearman"
     ))
@@ -471,9 +474,11 @@ simulation <- function (
       auc = auc,
       #aucReject = aucReject,
       CohensKappa = CohensKappa,
+      typeIperf = typeIperf,
+      typeIIperf = typeIIperf,
       ktd = ktd,
-      ktdTop = ktdTop,
-      spearmanTop = spearmanTop,
+      #ktdTop = ktdTop,
+      #spearmanTop = spearmanTop,
       ktc = ktc,
       spearman = spearman
     )
@@ -514,18 +519,18 @@ simulation <- function (
 if (FALSE) {
 #  
 #
-sim <- simulation (
+sim <- simulation(
   criteria = cbind.data.frame(
     name    = c("q1"),    # name of the criterion
     alpha   = c(3),       # alpha (parameter in the beta distribution)
     beta    = c(3),       # beta  (parameter in the beta distribution)
-    scale   = c(5),       # scale (expressed as number of categories)
+    scale   = c(2),       # scale (expressed as number of categories)
     gradeLanguage = c("asymmetric"), # Grade language: symmetric or asymmetric
     glh     = c(0.1),     # grade language heterogeneity
     weights = c(1)        # relative weight of the criteria 
   ), 
   nSubmissions = 100,
-  nReviewersPerProp = 20,
+  nReviewersPerProp = 3,
   nPropPerReviewer = 100,
   reviewerError = 0.2,
   reviewerVariability = 0.1,
@@ -539,8 +544,8 @@ sim <- simulation (
     "bordaCount",
     "control"
   ),
-  nAccepted = c(1:10 * 5),
-  seed = 1234,#sample(-999999:999999, size = 1)
+  nAccepted = c(5, 10, 20, 50),
+  seed = 12345,#sample(-999999:999999, size = 1)
   debug = FALSE
 )
 #

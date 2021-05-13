@@ -1224,13 +1224,16 @@ ri$aggrRule <- factor(
 # Selecting the variables we need from the baseline runs:
 # Subsetting the runs from the baseline parameter configuration:
 #ri$family <- NA
-ri$family[
-  ri$aggrRule %in% c("null", "highest score", "lowest score")] <- "benchmark"
-ri$family[
-  ri$aggrRule %in% c("mean", "trimmed mean", "hypermean")] <- "cardinal"
-ri$family[
-  ri$aggrRule %in% c("median","majority judgment","Borda count")] <- "ordinal"
-ri$family <- factor(ri$family, levels = c("cardinal", "ordinal", "benchmark"))
+ri$family[ri$aggrRule %in% c("null", "highest score", "lowest score")] <-
+  "benchmark\nrules"
+ri$family[ri$aggrRule %in% c("mean", "trimmed mean", "hypermean")] <-
+  "cardinal\nrules"
+ri$family[ri$aggrRule %in% c("median","majority judgment","Borda count")] <-
+  "ordinal\nrules"
+ri$family <- factor(
+  ri$family,
+  levels = c("cardinal\nrules", "ordinal\nrules", "benchmark\nrules")
+)
 
 palette <- viridisLite::viridis(
   n = 11, begin = 0.2, end = 1, alpha = 1, direction = -1, option = "A")

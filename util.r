@@ -18,8 +18,8 @@ allocationNetwork <- function(
   diag(rnw) <- 1
   
   # and then concatenating it to itself by row and col as many times as we need:
-  rnw <- do.call(rbind, replicate(nReviewersPerProp, rnw, simplify=FALSE)) 
-  rnw <- do.call(cbind, replicate(nPropPerReviewer, rnw, simplify=FALSE))
+  rnw <- do.call(rbind, replicate(nReviewersPerProp, rnw, simplify = FALSE)) 
+  rnw <- do.call(cbind, replicate(nPropPerReviewer, rnw, simplify = FALSE))
   
   return(rnw[,1:nSubmissions])
 }
@@ -29,45 +29,58 @@ allocationNetwork <- function(
 # Grading language _____________________________________________________________
 # A grade language is a vector of thresholds used to discretize a continuous 
 # quantity (e.g. a rate).
-# This function takes as input a criterion and the scholars data.frame, and for
-# each it returns a list where each item is the grade language of a scholar.
+#
+# This function creates a "template" set of thresholds, given a number of 
+# categories in the grading language (i.e. the "granularity").
+createTrueGradeLanguage <- function(granularity, type = "asymmetric") {
+  # If the grade language is random, then we create a grade language where the
+  # thresholds are drawn from a uniform distribution.
+  if (type == "random"){
+    thresholds <- runif (
+      n = granularity - 1, # This determines how many thresholds we need
+      min = 0, max = 1
+    )
+    thresholds <- thresholds[order(thresholds)]
+  }
+  
+  # If the grade language is symmetric, then the thresholds are evenly spread
+  # in the range.
+  if (type == "symmetric"){
+    thresholds <- (1:granularity - 1) / granularity
+    thresholds <- thresholds[-1]#[c(-1, -criterion$scale)]
+  }
+  
+  # If the grade language is asymmetric, then the threshold are concentrated
+  # around high quality values (where reviewers may be more focused)
+  if (type == "asymmetric"){
+    thresholds = c()
+    for (l in 1:(granularity - 1)){
+      thresholds[l] <- 1 - ((3 / 5) ^ l)  ## Equation 2
+    }
+    #thresholds <- thresholds[order(thresholds)]
+  }
+  
+  return(thresholds)
+}
+
+
+# This next function takes as input a criterion and the scholars data.frame, and
+# for each it returns a list where each item is the grade language of a scholar.
 createGradeLanguage <- function(
   scholars = reviewers,
   criterion = criteria[1,] # A row of the criteria dataframe, the 1st by default
 )
 {
   gradeLanguages <- list()
-  thresholds <- c()
   
-  # If the grade language is random, then we create a grade language where the
-  # thresholds are drawn from a uniform distribution.
-  if (criterion$gradeLanguage == "random"){
-    thresholds <- runif (
-      n = criterion$scale - 1, # This determines how many thresholds we need
-      min = 0, max = 1
-    )
-    #thresholds <- thresholds[order(thresholds)]
-  }
-  
-  # If the grade language is symmetric, then the thresholds are evenly spread
-  # in the range.
-  if (criterion$gradeLanguage == "symmetric"){
-    thresholds <- (1:criterion$scale - 1) / criterion$scale
-    thresholds <- thresholds[-1]#[c(-1, -criterion$scale)]
-  }
-  
-  # If the grade language is asymmetric, then the threshold are concentrated
-  # around high quality values (where reviewers may be more focused)
-  if (criterion$gradeLanguage == "asymmetric"){
-    for (l in 1:(criterion$scale - 1)){
-      thresholds[l] <- 1 - ((3 / 5) ^ l)  ## Equation 2
-    }
-    #thresholds <- thresholds[order(thresholds)]
-  }
-  
+  # First, we get a template language.
+  thresholds <- createTrueGradeLanguage(
+    granularity = criterion$scale,
+    type = criterion$gradeLanguage
+  )
   
   # Then, for each agent, we determine how much noise (if any)
-  # there needs to be around those thresholds
+  # there needs to be around the template thresholds.
   for (i in 1:nrow(scholars)){
     gradeLanguages[[i]] <- thresholds
     for (l in 1:(criterion$scale - 1)) {

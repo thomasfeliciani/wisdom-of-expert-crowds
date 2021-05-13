@@ -10,7 +10,8 @@ library("parallel")
 library("doSNOW")
 #set.seed(12345)
 
-
+parallelExecutions <- 100
+nRepetitions <- 1 # repetitions per execution
 
 runBattery <- function(nRepetitions, debug = FALSE){
   # Setting up the parameter space.
@@ -43,7 +44,7 @@ runBattery <- function(nRepetitions, debug = FALSE){
     "majorityJudgement",
     "bordaCount"
   )
-  nAccepted <- c(1:10 * 5)
+  nAccepted <- c(5, 10, 20, 50)#c(1:10 * 5)
   
   # Finally, we set some global parameters and initialize the object where
   # results will be stored.
@@ -155,11 +156,17 @@ runBattery <- function(nRepetitions, debug = FALSE){
           df[1,paste0("CohensKappa",r$parameters$nAccepted[n])] <- 
             results$CohensKappa[n]
           
-          df[1,paste0("KTDtop",r$parameters$nAccepted[n])] <- 
-            results$ktdTop[n]
+          df[1,paste0("typeIperf",r$parameters$nAccepted[n])] <- 
+            results$typeIperf[n]
           
-          df[1,paste0("spearmanTop",r$parameters$nAccepted[n])] <- 
-            results$spearmanTop[n]
+          df[1,paste0("typeIIperf",r$parameters$nAccepted[n])] <- 
+            results$typeIIperf[n]
+          
+          #df[1,paste0("KTDtop",r$parameters$nAccepted[n])] <- 
+          #  results$ktdTop[n]
+          
+          #df[1,paste0("spearmanTop",r$parameters$nAccepted[n])] <- 
+          #  results$spearmanTop[n]
         }
         df$KTD <- results$ktd
         df$KTC <- results$ktc
@@ -217,14 +224,14 @@ runBattery <- function(nRepetitions, debug = FALSE){
 
 
 # Running simulations in parallel ______________________________________________
-parallelExecutions <- 200
-nRepetitions <- 1 # repetitions per execution
-
 # runBattery(nRepetitions, debug = TRUE)
-
+# 
 print(paste("Simulation battery started on", Sys.time()))
 enableJIT(1)
-cl <- snow::makeCluster(parallel::detectCores() - 2)
+cl <- snow::makeCluster(
+  parallel::detectCores() - 2,
+  outfile = "./output/log.txt"
+)
 registerDoSNOW(cl)
 pb <- txtProgressBar(max = parallelExecutions, style = 3)
 progress <- function(n) setTxtProgressBar(pb, n)
@@ -233,7 +240,7 @@ ri <- foreach(
   i = 1:parallelExecutions,
   .combine = rbind,
   .options.snow = opts
-) %dopar% runBattery(nRepetitions)
+) %dopar% runBattery(nRepetitions, debug = TRUE)
 close(pb)
 stopCluster(cl)
 enableJIT(0)
