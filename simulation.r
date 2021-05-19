@@ -34,6 +34,7 @@ simulation <- function (
     "median",
     "majorityJudgement",
     "bordaCount"),
+  ruleVariant = "none",# "gloomy" "sunny"
   nAccepted = c(5, 10),
   seed = runif(1, -999999999, 999999999),
   debug = FALSE
@@ -52,6 +53,7 @@ simulation <- function (
     nPropPerReviewer = nPropPerReviewer,
     reviewerError = reviewerError,
     aggrRule = aggrRule,
+    ruleVariant = ruleVariant,
     nAccepted = nAccepted,
     seed = seed,
     timestamp = as.character(Sys.time())
@@ -150,10 +152,20 @@ simulation <- function (
       sd = reviewers$error[rev],
       rule = "quality",
       thresholds = gradeLanguages[[rev]],
-      categories = criteria$scale # Fix in case of combinatorial aggregation
+      categories = criteria$scale # To fix in case of combinatorial aggregation
     )
   }}
   
+  
+  # In case we have a "gloomy" or a "sunny" panel, we accordingly remove from
+  # each proposal the most positive/negative half of the grades it got.
+  if(ruleVariant != "none" & nReviewers > 2) {
+    ifelse(
+      ruleVariant == "gloomy",
+      grades <- gloomyfy(grades),
+      grades <- sunnyfy(grades)
+    )
+  }
   
   # All is left to do is to aggregate.
   #
@@ -522,9 +534,9 @@ if (FALSE) {
 sim <- simulation(
   criteria = cbind.data.frame(
     name    = c("q1"),    # name of the criterion
-    alpha   = c(3),       # alpha (parameter in the beta distribution)
-    beta    = c(3),       # beta  (parameter in the beta distribution)
-    scale   = c(2),       # scale (expressed as number of categories)
+    alpha   = c(5),       # alpha (parameter in the beta distribution)
+    beta    = c(2),       # beta  (parameter in the beta distribution)
+    scale   = c(5),       # scale (expressed as number of categories)
     gradeLanguage = c("asymmetric"), # Grade language: symmetric or asymmetric
     glh     = c(0.1),     # grade language heterogeneity
     weights = c(1)        # relative weight of the criteria 
@@ -533,7 +545,7 @@ sim <- simulation(
   nReviewersPerProp = 3,
   nPropPerReviewer = 100,
   reviewerError = 0.2,
-  reviewerVariability = 0.1,
+  reviewerVariability = 0.2,
   aggrRule = c(
     "mean",
     "excludeExtremes",
@@ -544,8 +556,9 @@ sim <- simulation(
     "bordaCount",
     "control"
   ),
+  ruleVariant = "gloomy", #######################3 "none"
   nAccepted = c(5, 10, 20, 50),
-  seed = 12345,#sample(-999999:999999, size = 1)
+  #seed = 12345,#sample(-999999:999999, size = 1)
   debug = FALSE
 )
 #

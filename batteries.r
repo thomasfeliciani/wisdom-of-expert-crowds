@@ -10,7 +10,7 @@ library("parallel")
 library("doSNOW")
 #set.seed(12345)
 
-parallelExecutions <- 100
+parallelExecutions <- 1#00
 nRepetitions <- 1 # repetitions per execution
 
 runBattery <- function(nRepetitions, debug = FALSE){
@@ -23,13 +23,15 @@ runBattery <- function(nRepetitions, debug = FALSE){
   nSubmissions <- c(100)
   nReviewersPerProp <- 2:13
   reviewerCompetence <- c(1, 0.8, 0.6)
+  ruleVariant <- c("none", "gloomy", "sunny")
   battery <- expand.grid(
     tqd = tqd,
     scale = scale,
     glh = glh,
     nSubmissions = nSubmissions,
     nReviewersPerProp = nReviewersPerProp,
-    reviewerError = 1 - reviewerCompetence
+    reviewerError = 1 - reviewerCompetence,
+    ruleVariant = ruleVariant
   )
   
   # Then, the parameters that vary within the simulation:
@@ -114,9 +116,10 @@ runBattery <- function(nRepetitions, debug = FALSE){
         ), 
         nSubmissions = battery$nSubmissions[b],
         nReviewersPerProp = battery$nReviewersPerProp[b],
-        nPropPerReviewer = battery$nSubmissions[b],# All reviewers review all prop
+        nPropPerReviewer = battery$nSubmissions[b],# All reviewers review all
         reviewerError = battery$reviewerError[b],
         aggrRule = aggrRule,
+        ruleVariant = battery$ruleVariant[b],
         nAccepted = nAccepted,
         seed = randomSeeds[runCounter]
       )
@@ -130,6 +133,7 @@ runBattery <- function(nRepetitions, debug = FALSE){
           seed = r$parameters$seed,
           timestamp = r$parameters$timestamp,
           aggrRule = rule,
+          ruleVariant = r$parameters$ruleVariant,
           alpha = r$parameters$criteria$alpha,
           beta = r$parameters$criteria$beta,
           scale = r$parameters$criteria$scale,
@@ -223,7 +227,14 @@ runBattery <- function(nRepetitions, debug = FALSE){
 }
 
 
-# Running simulations in parallel ______________________________________________
+
+
+#_______________________________________________________________________________
+# 
+# Running simulations in parallel.
+# This can take several hours.
+#_______________________________________________________________________________
+#
 # runBattery(nRepetitions, debug = TRUE)
 # 
 print(paste("Simulation battery started on", Sys.time()))
@@ -248,10 +259,68 @@ print(paste("Simulation battery completed on", Sys.time()))
 
 
 
+# Recoding..
+ri$aggrRule[ri$aggrRule == "highestScore"] <- "highest score"
+ri$aggrRule <- factor(
+  ri$aggrRule,
+  levels = rev(c(
+    "median", "mean", "trimmed mean", "hypermean", "majority judgment",
+    "lowest score", "highest score", "Borda count", "null"))
+)
+
+
+
+
+#_______________________________________________________________________________
+# 
+# Calculating parameter-configuration-level
+# averages and s.d. of all outcome variables
+#_______________________________________________________________________________
+#
+# We create a data.frame "battery" where each row is a unique parameter
+# configuration.
+battery <- expand.grid(
+  tqd = unique(ri$tqd),
+  scale = unique(ri$scale),
+  glh = unique(ri$glh),
+  nReviewersPerProp = unique(ri$nReviewersPerProp),
+  reviewerCompetence = 1 - unique(ri$reviewerError),
+  aggRule = unique(ri$aggrRule),
+  ruleVariant = unique(ri$ruleVariant)
+)
+
+# For each unique parameter configuration, we measure the average and s.d.
+# of all outcome variables and we add them to the data.frame "battery".
+# This can take several minutes.
+print("Calculating aggregate statistics.")
+pb <- txtProgressBar(max = nrow(battery), style = 3); setTxtProgressBar(pb, 0)
+for (i in 1:nrow(battery)){
+  x <- subset(
+    ri,
+    ri$tqd == battery$tqd[i] &
+      ri$scale == battery$scale[i] &
+      ri$glh == battery$glh[i] &
+      ri$nReviewersPerProp == battery$nReviewersPerProp[i] &
+      1 - ri$reviewerError == battery$reviewerCompetence[i] &
+      ri$aggrRule == battery$aggRule[i] &
+      ruleVariant == battery$ruleVariant
+  )
+  battery$nRuns[i] <- nrow(x)
+  for (var in 12:35){ # index of variables in x (see names(x))
+    battery[i, paste0(names(x)[var], "_sd")] <- 
+      sd(x[, var], na.rm = TRUE)
+    battery[i, paste0(names(x)[var], "_mean")] <-
+      mean(x[,var], na.rm = TRUE)
+  }
+  setTxtProgressBar(pb, i)
+}
+
+
+
 # Saving results to file________________________________________________________
 save(
   file = "./output/ri.RData",
-  ri
+  ri, battery
 )
 
 print(object.size(ri), units="Mb")

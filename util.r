@@ -340,7 +340,7 @@ hypermean <- function(scores, dampingOutliers = TRUE) {
       #y = rowSums(scores[,-rev], na.rm = TRUE), # sum of scores by the others
       y = rowSum, # sum of scores by the whole panel
       method = "spearman", # ranking correlation
-      use = "complete.obs"
+      use = "pairwise.complete.obs"
     ))
   }
   
@@ -364,8 +364,13 @@ hypermean <- function(scores, dampingOutliers = TRUE) {
   
   # Now it's time to aggregate all score by weighing reviewers.
   aggregatedScores <- c()
-  for (i in 1:nrow(scores)){aggregatedScores[i] <- 
-    weighted.mean(x = scores[i,], na.rm = TRUE, w = revWeights)}
+  for (i in 1:nrow(scores)){
+    aggr <- weighted.mean(x = scores[i,], na.rm = TRUE, w = revWeights)
+    
+    if(is.nan(aggr)) aggr <- mean(scores[i,], na.rm = TRUE)
+    
+    aggregatedScores[i] <- aggr
+  }
   
   return(aggregatedScores)
 }
@@ -450,6 +455,36 @@ aggregate <- function (
   
   return(aggregatedScores)
 }
+
+
+
+# The next two functions, gloomyfy and sunnyfy, transform the scores matrix by 
+# transforming, for each submission, half the grades in NA. But they do so in
+# two complementary ways: gloomyfy transforms in NA the half with the highest
+# grades (thereby only keeping the most negative half), whereas sunnyfy does the
+# opposite.
+gloomyfy <- function(scores) {
+  return(t(apply(
+    X = scores,
+    MARGIN = 1,
+    FUN = function(x){
+      x[order(x)[(ceiling(length(x) / 2) + 1):length(x)]] <- NA
+      return(x)
+    }
+  )))
+}
+sunnyfy <- function(scores) {
+  return(t(apply(
+    X = scores,
+    MARGIN = 1,
+    FUN = function(x){
+      x[order(x)[1:floor(length(x) / 2)]] <- NA
+      return(x)
+    }
+  )))
+}
+
+
 
 
 # Outcome measure ______________________________________________________________

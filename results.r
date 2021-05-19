@@ -134,6 +134,11 @@ ggplot(
 dev.off()
 rm(asymm, gl, cl, labz, ls, padd, pointer, ps, t, d)
 
+
+
+
+
+
 #_______________________________________________________________________________
 # 
 # Importing simulation data
@@ -144,18 +149,10 @@ rm(asymm, gl, cl, labz, ls, padd, pointer, ps, t, d)
 # (can take a few seconds)
 load(file = "./output/ri.RData")
 
-ri$aggrRule[ri$aggrRule == "highestScore"] <- "highest score" ##################
-
-
-ri$aggrRule <- factor(
-  ri$aggrRule,
-  levels = rev(c(
-  "median", "mean", "trimmed mean", "hypermean", "majority judgment",
-  "lowest score", "highest score", "Borda count", "null"))
-)
-
 
 colorScheme = "A" # we'll use this palette from Viridis
+
+
 
 
 # Figure 3: Baseline (1/2)______________________________________________________
@@ -1403,3 +1400,11 @@ ggplot(
     legend.box.background = element_rect(fill = "transparent",color=NA),
     text = element_text(size = 15)
   )
+
+
+
+
+
+
+
+
