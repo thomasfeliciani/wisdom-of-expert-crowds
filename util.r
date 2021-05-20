@@ -378,71 +378,76 @@ hypermean <- function(scores, dampingOutliers = TRUE) {
 
 
 
-# The aggregation function takes as input a vector of reviewer's scores and
-# returns the aggregated score.
+# The aggregation function takes as input a matrix containing reviewers' grades
+# and returns a vector with the aggregated scores of each submission.
 aggregate <- function (
   scores,
   rule = "mean",
-  weights = NA,
-  criteriaWeightsError = 0,
-  reviewers = NA,
-  gradeLanguages = NA
+  w = NA
 ){
   aggregatedScores <- c()
   
   if (rule == "mean"){
-    for (i in 1:nrow(scores)){aggregatedScores[i] <- 
-      mean(scores[i,], na.rm = TRUE)}
+    aggregatedScores <- apply(
+      X = scores,
+      MARGIN = 1,
+      FUN = mean,
+      na.rm = TRUE
+    )
   }
   
   if (rule == "median"){
-    for (i in 1:nrow(scores)){aggregatedScores[i] <- 
-      median(scores[i,], na.rm = TRUE)}
+    aggregatedScores <- apply(
+      X = scores,
+      MARGIN = 1,
+      FUN = median,
+      na.rm = TRUE
+    )
   }
   
   if (rule == "weightedMean"){
-    for (i in 1:nrow(scores)){
-      if (criteriaWeightsError == 0) {
-        aggregatedScores[i] <- weighted.mean(scores[i,], weights, na.rm = TRUE)
-      } else {
-        w <- weights + runif(
-          n=length(weights),
-          min= -criteriaWeightsError, max = criteriaWeightsError
-        )
-        aggregatedScores[i] <- weighted.mean(scores[i,], w, na.rm = TRUE)
-      }
-    }
+    if (is.na(w)) stop("Weighted mean aggregation: weights are missing")
+    test <- apply(
+      X = scores,
+      MARGIN = 1,
+      FUN = weighted.mean,
+      w = w,
+      na.rm = TRUE
+    )
   }
   
   if (rule == "lowestScore"){
-    for (i in 1:nrow(scores)){aggregatedScores[i] <- 
-      min(scores[i,], na.rm = TRUE)}
+    aggregatedScores <- apply(
+      X = scores,
+      MARGIN = 1,
+      FUN = min,
+      na.rm = TRUE
+    )
   }
   
   if (rule == "highestScore"){
-    for (i in 1:nrow(scores)){aggregatedScores[i] <- 
-      max(scores[i,], na.rm = TRUE)}
+    aggregatedScores <- apply(
+      X = scores,
+      MARGIN = 1,
+      FUN = max,
+      na.rm = TRUE
+    )
   }
   
-  if (rule == "excludeExtremes"){
-    for (i in 1:nrow(scores)){
-      x <- scores[i,]
-      x <- x[!is.na(x)]
-      len <- length(x)
-      
-      ifelse(
+  if (rule == "excludeExtremes" | rule == "trimmedMean"){
+    aggregatedScores <- apply(
+      X = scores,
+      MARGIN = 1,
+      FUN = function(x) {
+        x <- x[!is.na(x)]
+        len <- length(x)
         
-        # if there are more than three reviews...
-        len > 3,
-        
-        # ... take the mean excluding (one of) the minimum grades and (one of)
-        # the maximum grades...
-        aggregatedScores[i] <- mean(sort(x)[c(-1, -len)]),
-        
-        # ... else just take the mean.
-        aggregatedScores[i] <- mean(x)
-      )
-    }
+        # If there are more than three reviews take the mean excluding (one of)
+        # the minimum grades and (one of) the maximum grades. Else, just take
+        # the mean:
+        ifelse(len > 3, return(mean(sort(x)[c(-1, -len)])), return(mean(x)))
+      }
+    )
   }
   
   if (rule == "majorityJudgement"){

@@ -149,7 +149,6 @@ rm(asymm, gl, cl, labz, ls, padd, pointer, ps, t, d)
 # (can take a few seconds)
 load(file = "./output/ri.RData")
 
-
 colorScheme = "A" # we'll use this palette from Viridis
 
 
@@ -166,7 +165,8 @@ rii <- subset(
     ri$scale == 5 &
     ri$glh == 0.1 &
     ri$nReviewersPerProp == 5 &
-    ri$competence == 0.8
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none"
 )
 rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
 df <- rii[,c("aggrRule", "Spearman")] #"qualityEff", "kts", "KTC"
@@ -326,7 +326,8 @@ rii <- subset(
   ri,
   ri$tqd == "top skewed" &
     ri$scale == 5 &
-    ri$glh == 0.1
+    ri$glh == 0.1 &
+    ri$ruleVariant == "none"
 )
 rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
 dft <- rii[,c(
@@ -404,7 +405,8 @@ rii <- subset(
     #ri$scale == 5 &
     ri$glh == 0.1 &
     ri$nReviewersPerProp == 5 &
-    ri$competence == 0.8
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none"
 )
 dft <- rii[,c(
   "aggrRule", "scale",
@@ -485,7 +487,8 @@ rii <- subset(
     #ri$scale == 5 &
     ri$glh == 0.1 &
     ri$nReviewersPerProp == 5 &
-    ri$competence == 0.8
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none"
 )
 dft <- rii[,c(
   "aggrRule", "scale",
@@ -574,8 +577,9 @@ rii <- subset(
   ri$tqd == "top skewed" &
     ri$scale == 5 &
     #ri$glh == 0.1 &
-    ri$nReviewersPerProp == 5 #&
-    #ri$competence == 0.8
+    ri$nReviewersPerProp == 5 &
+    #ri$competence == 0.8 &
+    ri$ruleVariant == "none"
 )
 rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
 dft <- rii[,c(
@@ -711,7 +715,8 @@ rii <- subset(
     ri$scale == 5 &
     ri$glh == 0.1 &
     ri$nReviewersPerProp == 5 &
-    ri$competence == 0.8
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none"
 )
 rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
 
@@ -1254,7 +1259,8 @@ rii <- subset(
     ri$scale == 5 &
     ri$glh == 0.05 &                     ###
     ri$nReviewersPerProp == 5 &
-    ri$competence == 0.8
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none"
 )
 rii$aggrRule <- factor(
   rii$aggrRule,
@@ -1353,7 +1359,8 @@ rii <- subset(
     #ri$scale == 5 &
     ri$glh == 0.05 &                     ###
     ri$nReviewersPerProp == 5 &
-    ri$competence == 0.8
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none"
 )
 rii$aggrRule <- factor(
   rii$aggrRule,

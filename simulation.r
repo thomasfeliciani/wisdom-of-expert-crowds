@@ -186,9 +186,9 @@ simulation <- function (
     ) {
       x <- aggregate(
         scores = grades,
-        rule = aggrRule[rule],
-        weights = criteria$weights,
-        reviewers = reviewers
+        rule = aggrRule[rule]#,
+        #weights = criteria$weights,
+        #reviewers = reviewers
       )
       x <- x / (criteria$scale - 1) # Normalizing scores to range btw. 0 and 1
     }

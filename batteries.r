@@ -10,7 +10,7 @@ library("parallel")
 library("doSNOW")
 #set.seed(12345)
 
-parallelExecutions <- 1#00
+parallelExecutions <- 100
 nRepetitions <- 1 # repetitions per execution
 
 runBattery <- function(nRepetitions, debug = FALSE){
@@ -293,6 +293,7 @@ battery <- expand.grid(
 # of all outcome variables and we add them to the data.frame "battery".
 # This can take several minutes.
 print("Calculating aggregate statistics.")
+enableJIT(1)
 pb <- txtProgressBar(max = nrow(battery), style = 3); setTxtProgressBar(pb, 0)
 for (i in 1:nrow(battery)){
   x <- subset(
@@ -303,7 +304,7 @@ for (i in 1:nrow(battery)){
       ri$nReviewersPerProp == battery$nReviewersPerProp[i] &
       1 - ri$reviewerError == battery$reviewerCompetence[i] &
       ri$aggrRule == battery$aggRule[i] &
-      ruleVariant == battery$ruleVariant
+      ruleVariant == battery$ruleVariant[i]
   )
   battery$nRuns[i] <- nrow(x)
   for (var in 12:35){ # index of variables in x (see names(x))
@@ -314,6 +315,9 @@ for (i in 1:nrow(battery)){
   }
   setTxtProgressBar(pb, i)
 }
+enableJIT(0)
+print(paste("Calculation of aggregate statistics completed on", Sys.time()))
+
 
 
 
