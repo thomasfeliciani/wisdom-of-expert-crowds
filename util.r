@@ -387,27 +387,23 @@ aggregate <- function (
 ){
   aggregatedScores <- c()
   
-  if (rule == "mean"){
-    aggregatedScores <- apply(
-      X = scores,
-      MARGIN = 1,
-      FUN = mean,
-      na.rm = TRUE
-    )
-  }
+  if (rule == "mean") aggregatedScores <- apply(
+    X = scores,
+    MARGIN = 1,
+    FUN = mean,
+    na.rm = TRUE
+  )
   
-  if (rule == "median"){
-    aggregatedScores <- apply(
-      X = scores,
-      MARGIN = 1,
-      FUN = median,
-      na.rm = TRUE
-    )
-  }
+  if (rule == "median") aggregatedScores <- apply(
+    X = scores,
+    MARGIN = 1,
+    FUN = median,
+    na.rm = TRUE
+  )
   
   if (rule == "weightedMean"){
     if (is.na(w)) stop("Weighted mean aggregation: weights are missing")
-    test <- apply(
+    aggregatedScores <- apply(
       X = scores,
       MARGIN = 1,
       FUN = weighted.mean,
@@ -416,23 +412,19 @@ aggregate <- function (
     )
   }
   
-  if (rule == "lowestScore"){
-    aggregatedScores <- apply(
-      X = scores,
-      MARGIN = 1,
-      FUN = min,
-      na.rm = TRUE
-    )
-  }
+  if (rule == "lowestScore") aggregatedScores <- apply(
+    X = scores,
+    MARGIN = 1,
+    FUN = min,
+    na.rm = TRUE
+  )
   
-  if (rule == "highestScore"){
-    aggregatedScores <- apply(
-      X = scores,
-      MARGIN = 1,
-      FUN = max,
-      na.rm = TRUE
-    )
-  }
+  if (rule == "highestScore") aggregatedScores <- apply(
+    X = scores,
+    MARGIN = 1,
+    FUN = max,
+    na.rm = TRUE
+  )
   
   if (rule == "excludeExtremes" | rule == "trimmedMean"){
     aggregatedScores <- apply(
@@ -450,13 +442,11 @@ aggregate <- function (
     )
   }
   
-  if (rule == "majorityJudgement"){
-    aggregatedScores <- calcMajorityJudgement(scores)$majorityJudgment
-  }
+  if (rule == "majorityJudgement") aggregatedScores <-
+      calcMajorityJudgement(scores)$majorityJudgment
   
-  if (rule == "bordaCount"){
-    aggregatedScores <- modifiedBordaCount(scores)$bordaCount
-  }
+  if (rule == "bordaCount") aggregatedScores <-
+      modifiedBordaCount(scores)$bordaCount
   
   return(aggregatedScores)
 }
