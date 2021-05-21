@@ -13,7 +13,7 @@ simulation <- function (
     alpha   = c(3),       # alpha (parameter in the beta distribution)
     beta    = c(3),       # beta  (parameter in the beta distribution)
     scale   = c(5),       # scale (expressed as number of categories)
-    gradeLanguage = c("asymmetric"), # Grade language: symmetric or asymmetric
+    #gradeLanguage = c("asymmetric"), # Grade language: symmetric or asymmetric
     glh     = c(0.1),     # grade language heterogeneity
     weights = c(1)        # relative weight of the criteria 
   ),
@@ -74,9 +74,9 @@ simulation <- function (
   
   # Based on their trueQuality, we calculate what grade they deserve in the
   # specified grading language:
-  thresholds <- createTrueGradeLanguage(
-    granularity = criteria$scale,
-    type = criteria$gradeLanguage
+  thresholds <- qbeta(
+    1:(criteria$scale - 1) / criteria$scale,
+    shape1 = 2, shape2 = 1
   )
   submissions$trueGrade <- findInterval(submissions$trueQuality, thresholds)
   
@@ -121,18 +121,17 @@ simulation <- function (
   
   # Next, we give each reviewer a grade language interpretation - that is, a
   # vector of thresholds that determine how the continuous evaluation scale
-  # is to be discretized. 
-  gradeLanguages <- createGradeLanguage(
-    scholars = reviewers,
-    criterion = criteria
-  )
-  #gradeLanguages <- list()
-  #for (c in 1:nrow(criteria)){
-  #  gradeLanguages <- createGradeLanguage(
-  #    scholars = reviewers,
-  #    criterion = criteria[c,]
-  #  )
-  #}
+  # is to be discretized.
+  gradeLanguages <- list()
+  for (i in 1:nReviewers){
+    gl <- truncate(rnorm(
+      n = criteria$scale - 1,
+      mean = thresholds,
+      sd = criteria$glh
+    ))
+    gradeLanguages[[i]] <- gl[order(gl)]
+  }
+  
   
   # Now we have all we need for reviewers to rate the submissions.
   # Each reviewer is going to rate the submission she's assigned to, giving a
@@ -537,7 +536,7 @@ sim <- simulation(
     alpha   = c(5),       # alpha (parameter in the beta distribution)
     beta    = c(2),       # beta  (parameter in the beta distribution)
     scale   = c(5),       # scale (expressed as number of categories)
-    gradeLanguage = c("asymmetric"), # Grade language: symmetric or asymmetric
+    #gradeLanguage = c("asymmetric"), # Grade language: symmetric or asymmetric
     glh     = c(0.1),     # grade language heterogeneity
     weights = c(1)        # relative weight of the criteria 
   ), 

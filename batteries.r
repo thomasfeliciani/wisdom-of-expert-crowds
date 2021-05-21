@@ -109,7 +109,7 @@ runBattery <- function(nRepetitions, debug = FALSE){
           alpha   = alpha,
           beta    = beta,
           scale   = battery$scale[b],
-          gradeLanguage = c("asymmetric"),
+          #gradeLanguage = c("asymmetric"),
           glh     = battery$glh[b],
           weights = c(1)#,
           #debug = debug
@@ -137,7 +137,7 @@ runBattery <- function(nRepetitions, debug = FALSE){
           alpha = r$parameters$criteria$alpha,
           beta = r$parameters$criteria$beta,
           scale = r$parameters$criteria$scale,
-          gradeLanguage = r$parameters$criteria$gradeLanguage,
+          #gradeLanguage = r$parameters$criteria$gradeLanguage,
           glh = r$parameters$criteria$glh,
           nSubmissions = r$parameters$nSubmissions,
           nReviewersPerProp = r$parameters$nReviewersPerProp,
@@ -307,7 +307,7 @@ for (i in 1:nrow(battery)){
       ruleVariant == battery$ruleVariant[i]
   )
   battery$nRuns[i] <- nrow(x)
-  for (var in 12:35){ # index of variables in x (see names(x))
+  for (var in 11:35){ # index of variables in x (see names(x))
     battery[i, paste0(names(x)[var], "_sd")] <- 
       sd(x[, var], na.rm = TRUE)
     battery[i, paste0(names(x)[var], "_mean")] <-
