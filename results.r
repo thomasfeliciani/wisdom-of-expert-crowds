@@ -52,12 +52,9 @@ rm(x, yl)
 # Figure 2: Grading languages___________________________________________________
 #
 #
-asymm <- c()
-for (t in 1:4) {asymm[t] <- 1 - ((3/5) ^ t)}
-
 gl <- list(
-  asymm,
-  c(0.2, 0.4, 0.6, 0.8)
+  qbeta(1:4 / 5, shape1 = 2, shape2 = 1), # strict
+  c(0.2, 0.4, 0.6, 0.8) # regular
 )
 
 d <- data.frame(c(
@@ -133,6 +130,32 @@ ggplot(
 
 dev.off()
 rm(asymm, gl, cl, labz, ls, padd, pointer, ps, t, d)
+
+
+
+
+# Figure 3: Grading languages___________________________________________________
+#
+#
+
+for (scale in c(2,5,10,20)) {
+  d <- qbeta(1:(scale - 1) / scale, shape1 = 2, shape2 = 1)
+}
+
+
+ggplot() +
+  geom_line(
+    data = data.frame(
+      x = 1:100/100,
+      y = dbeta(1:100/100, shape1 = 2, shape2 = 1)),
+    aes(x = x, y = y)
+  )
+
+
+qbeta(1:4 / 5, shape1 = 2, shape2 = 1)
+
+
+
 
 
 

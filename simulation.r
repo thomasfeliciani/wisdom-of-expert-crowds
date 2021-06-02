@@ -20,6 +20,7 @@ simulation <- function (
   nSubmissions = 20,
   nReviewersPerProp = 5,
   nPropPerReviewer = 3, # max
+  truthNoise = 0.2,
   reviewerError = 0.2, # reviewer competence is defined as 1 - reviewerError
   reviewerVariability = 0.2,
   reviewerBias = 0,
@@ -51,6 +52,7 @@ simulation <- function (
     nSubmissions = nSubmissions,
     nReviewersPerProp = nReviewersPerProp,
     nPropPerReviewer = nPropPerReviewer,
+    truthNoise = truthNoise,
     reviewerError = reviewerError,
     aggrRule = aggrRule,
     ruleVariant = ruleVariant,
@@ -78,7 +80,15 @@ simulation <- function (
     1:(criteria$scale - 1) / criteria$scale,
     shape1 = 2, shape2 = 1
   )
-  submissions$trueGrade <- findInterval(submissions$trueQuality, thresholds)
+  
+  # There might be noise in the determination of the correct grade, too, since
+  # the rating task might not be defined.
+  submissions$trueGrade <- findInterval(
+    truncate(rnorm(
+      n = nSubmissions, mean = submissions$trueQuality, sd = truthNoise
+    )),
+    thresholds
+  )
   
   # Next, we calculate, for each submission, what would be the true ranking
   # position of the submissions. We assume a strict ordering for now, so we
@@ -249,23 +259,23 @@ simulation <- function (
     xr  <- rank(1 / g,  na.last = "keep", ties.method = "first")
     
     
-    # Here we calculate, for each value of nAccepted, which proposals have a
-    # trueQuality level worthy of acceptance, and which an estimQuality level
-    # that would get them accepted. We store everything in a dedicated list.
-    tqDeserved <- estimated <- list()
-    for (a in 1:length(nAccepted)){
-      
-      # Deserving proposals (deserved == TRUE) are here defined as the proposals
-      # whose objective grade is equal to or higher than the true quality of the
-      # proposals on the cutoff threhsold.
-      tqDeserved[[a]] <- submissions$trueGrade >=
-        submissions[submissions$trueRanking == nAccepted[a],]$trueGrade
-      
-      # Estimated is set to TRUE for all proposals whose estimated quality is 
-      # equal to or greater than the estimated quality of the proposal on the 
-      # cutoff threshold:
-      estimated[[a]] <- x >= x[xr == nAccepted[a]]
-    }
+    ## Here we calculate, for each value of nAccepted, which proposals have a
+    ## trueQuality level worthy of acceptance, and which an estimQuality level
+    ## that would get them accepted. We store everything in a dedicated list.
+    #tqDeserved <- estimated <- list()
+    #for (a in 1:length(nAccepted)){
+    #  
+    #  # Deserving proposals (deserved == TRUE) are here defined as the proposals
+    #  # whose objective grade is equal to or higher than the true quality of the
+    #  # proposals on the cutoff threshold.
+    #  tqDeserved[[a]] <- submissions$trueGrade >=
+    #    submissions[submissions$trueRanking == nAccepted[a],]$trueGrade
+    #  
+    #  # Estimated is set to TRUE for all proposals whose estimated quality is 
+    #  # equal to or greater than the estimated quality of the proposal on the 
+    #  # cutoff threshold:
+    #  estimated[[a]] <- x >= x[xr == nAccepted[a]]
+    #}
     
     
     # Last, we calculate the outcome measures.
@@ -302,7 +312,7 @@ simulation <- function (
     # not on top according to the estimated ranking.
     # Note that, despite the underlying strict ordering, the way we calculate
     # this measure is equivalent to assuming a weak ordering of submissions.
-    rankingEfficacy <- auc <- CohensKappa <- typeIperf <- typeIIperf <- c()
+    rankingEfficacy <- auc <- CohensKappa <- c()#typeIperf <- typeIIperf <- c()
     confusionMatrix <- list()
     #rankingEfficacy <- oRankingEfficacy <- c()
     
@@ -319,7 +329,21 @@ simulation <- function (
       # The list of proposals that deserve funding: those that have a true
       # quality at least equal to that of the k-th proposal in the merit
       # ranking.
-      acceptableLogic <- submissions$trueGrade >= thT
+      # If there is a tie for the k-th position, we choose at random how to
+      # resolve it so that we have exactly k proposals to be deemed worthy of
+      # being funded.
+      acceptableLogic <- submissions$trueGrade > thT
+      tieForK <- submissions$trueGrade == thT
+      ifelse(
+        sum(tieForK) == 1, # if there aren't ties for the k-th position..
+        acceptableLogic <- acceptableLogic | tieForK, # ..then it's simple...
+        acceptableLogic[sample( # else, we break the tie in a random way
+          which(tieForK),
+          size = k - sum(acceptableLogic),
+          replace = FALSE
+        )] <- TRUE
+      )
+      #acceptableLogic <- submissions$trueGrade >= thT
       acceptableOnes <- which(acceptableLogic)
       
       
@@ -393,18 +417,18 @@ simulation <- function (
         acceptableLogic, panelChoice
       )))$value
       
-      # Info on the margins of the confusion matrix:
-      kmerit <- sum(acceptableLogic)
-      kpanel <- sum(panelChoice)
-      
-      # ... which we use to calculate the type I and type II error performance:
-      falsePositive <- sum(panelChoice & !acceptableLogic)
-      expectFalsePositive <- kmerit * (nSubmissions - kmerit) / nSubmissions
-      typeIperf[a] <- 1 - (falsePositive / expectFalsePositive)
-      
-      falseNegative <- sum(!panelChoice & acceptableLogic)
-      expectFalseNegative <-  kmerit * (nSubmissions - kpanel) / nSubmissions
-      typeIIperf[a] <- 1 - (falseNegative / expectFalseNegative)
+      ## Info on the margins of the confusion matrix:
+      #kmerit <- sum(acceptableLogic)
+      #kpanel <- sum(panelChoice)
+      #
+      ## ... which we use to calculate the type I and type II error performance:
+      #falsePositive <- sum(panelChoice & !acceptableLogic)
+      #expectFalsePositive <- kmerit * (nSubmissions - kmerit) / nSubmissions
+      #typeIperf[a] <- 1 - (falsePositive / expectFalsePositive)
+      #  
+      #falseNegative <- sum(!panelChoice & acceptableLogic)
+      #expectFalseNegative <-  kmerit * (nSubmissions - kpanel) / nSubmissions
+      #typeIIperf[a] <- 1 - (falseNegative / expectFalseNegative)
     }
     
     # For the next outcome metrics, we need to have the weak orderings of
@@ -413,7 +437,7 @@ simulation <- function (
     weakOrdEstimQuality <- rank(x, ties.method = "max")
     
     # Now we calculate the normalized Kendall-tau distance between the two
-    # weak orderings: based on trueQuality and based on estimated quality (x).
+    # weak orderings: based on trueGrade and based on estimated quality (x).
     # The Kendall distance is calculated for the whole ranking (kend), and for
     # the objectively-best proposals only (kendTop).
     ifelse(
@@ -485,8 +509,8 @@ simulation <- function (
       auc = auc,
       #aucReject = aucReject,
       CohensKappa = CohensKappa,
-      typeIperf = typeIperf,
-      typeIIperf = typeIIperf,
+      #typeIperf = typeIperf,
+      #typeIIperf = typeIIperf,
       ktd = ktd,
       #ktdTop = ktdTop,
       #spearmanTop = spearmanTop,
@@ -503,8 +527,8 @@ simulation <- function (
         estimQuality = x,
         estimRanking = xr
       ),
-      tqDeserved = tqDeserved,
-      estimated = estimated,
+      #tqDeserved = tqDeserved,
+      #estimated = estimated,
       outcomeMetrics = outcomeMetrics
     )
     names(r)[rule] <- aggrRule[rule]
@@ -543,6 +567,7 @@ sim <- simulation(
   nSubmissions = 100,
   nReviewersPerProp = 3,
   nPropPerReviewer = 100,
+  truthNoise = 0.1,
   reviewerError = 0.2,
   reviewerVariability = 0.2,
   aggrRule = c(
