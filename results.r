@@ -4,12 +4,16 @@
 rm(list = ls())
 
 # Loading libraries and resources:
-library(ggplot2)
 library(reshape2)
+library(ggplot2)
+library(ggpubr)
 library(viridis)
 source("simulation.r")
 
 exportFormat = "png" # "png" or "tiff" are supported.
+
+
+
 
 # Figure 1: merit distribution__________________________________________________
 figureParameters <- list(
@@ -47,6 +51,8 @@ title(bquote(atop(
 
 dev.off()
 rm(x, yl)
+
+
 
 
 # Figure 2: Grading languages___________________________________________________
@@ -114,14 +120,14 @@ ggplot(
   geom_text(aes(y=(1-V4)/2+V4, x=id, label=labz[5], hjust = 0),
             color=cl,check_overlap=TRUE, size=ls) +
   ylab("\nmerit") +
-  scale_y_continuous(expand=c(0,0.002), breaks=c(0:5/5)) +
-  scale_x_discrete(expand = expansion(mult = c(0.3,0.9)), position = "top") +
+  scale_y_continuous(expand = c(0, 0), breaks = c(0:5/5)) +
+  scale_x_discrete(expand = expansion(mult = c(0.3, 0.9)), position = "top") +
   theme(
     legend.position = "none",
     panel.border = element_blank(),
     panel.background = element_blank(),
-    panel.grid.major.x = element_line(color="darkorange1"),#black
-    panel.grid.major.y = element_line(color="gray95"),
+    panel.grid.major.x = element_line(color = "darkorange1"),#black
+    panel.grid.major.y = element_line(color = "gray95"),
     panel.grid.minor = element_blank(),
     axis.ticks.x = element_blank(),
     axis.line = element_blank(),
@@ -137,27 +143,136 @@ rm(asymm, gl, cl, labz, ls, padd, pointer, ps, t, d)
 # Figure 3: Grading languages___________________________________________________
 #
 #
-
-for (scale in c(2,5,10,20)) {
-  d <- qbeta(1:(scale - 1) / scale, shape1 = 2, shape2 = 1)
+granul <- c(2, 5, 10)#c(2,5,10,20)
+for (gr in 1:length(granul)) {
+  scale = granul[[gr]]
+  th <- data.frame(
+    granularity = granul[[gr]],
+    th = qbeta(1:(scale - 1) / scale, shape1 = 2, shape2 = 1)
+  )
+  ifelse(gr == 1, d <- th, d <- rbind(d, th))
 }
+granul <- factor(granul, levels = c("5", "2", "10")) # reordering factor levels
 
 
-ggplot() +
-  geom_line(
+th <- ggplot(data = d, aes(x = th, y = as.factor(granularity))) +
+  geom_segment(
     data = data.frame(
-      x = 1:100/100,
-      y = dbeta(1:100/100, shape1 = 2, shape2 = 1)),
-    aes(x = x, y = y)
+      x = rep(0, times = length(granul)),
+      xend = rep(1, times = length(granul)), y = granul, yend = granul
+    ),
+    aes(x = x, y = y, xend = xend, yend = yend),
+    color = "darkorange1"#alpha("darkorange1", 0.5) 
+  ) +
+  geom_point(color = "white", shape = 15, size = 2) +# masks the orange line
+  geom_point( # masks the line at the lowest and highest limit of the scale
+    data = data.frame(
+      granularity = c(granul, granul),
+      th = c(rep(0, times = length(granul)), rep(1, times = length(granul)))
+    ),
+    color = "white", shape = 15, size = 1
+    ) +
+  geom_text(data = d, aes(label = ")["), size = 3, color = "black") +
+  geom_text( # opening square brackets
+    data = data.frame(
+      granularity = granul, th = rep(0, times = length(granul))
+    ), 
+    aes(label = "["), size = 3, color = "black"
+  ) +
+  geom_text( # closing square brackets
+    data = data.frame(
+      granularity = granul, th = rep(1, times = length(granul))
+    ), 
+    aes(label = "]"), size = 3, color = "black"
+  ) +
+  scale_x_continuous(limits = c(0, 1), expand = c(0.004,0), breaks = 0:5/5) +
+  scale_y_discrete(
+    limits = rev(levels(granul)),
+    labels = c("L=10", "L=2", "L=5")
+  ) +
+  labs(
+    x = "merit", y = ""
+  ) +
+  theme(
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major.x = element_line(color = "gray95"),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.line = element_blank(),
+    axis.text.y = element_text(size = 11, color = "black")
   )
 
 
-qbeta(1:4 / 5, shape1 = 2, shape2 = 1)
+quantiles <- data.frame(
+  x = qbeta(1:4 / 5, shape1 = 2, shape2 = 1),
+  xend = qbeta(1:4 / 5, shape1 = 2, shape2 = 1),
+  y = c(0, 0, 0, 0),
+  yend = dbeta(qbeta(1:4 / 5, shape1 = 2, shape2 = 1), shape1 = 2, shape2 = 1)
+)
+betapdf <- data.frame(
+  x = 1:100/100,
+  y = dbeta(1:100/100, shape1 = 2, shape2 = 1))
+
+pdf <- ggplot() + # probability density function
+  geom_line(data = betapdf, aes(x = x, y = y), linetype = "dashed") +
+  geom_area(
+    data = betapdf, aes(x = x, y = y), fill = alpha("black", 0.08)
+  ) +
+  geom_segment(
+    data = quantiles,
+    aes(x = x, y = y, xend = xend, yend = yend),
+    color = "black"
+  ) +
+  geom_text(aes(
+    x = qbeta(1:4 / 5, shape1 = 2, shape2 = 1) - 0.03,
+    y = rep(0.45, times = 4),#quantiles$yend / 2,
+    label =
+      c("1st quintile", "2nd quintile", "3rd quintile", "4th quintile")
+  ), size = 3, angle = 90, color = "black"
+  ) +
+  scale_x_continuous(limits = c(0, 1), expand = c(0.004,0), breaks = 0:5/5) +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs (y = "L=5\ndensity function") +#, x = "merit") +
+  theme(
+    legend.position = "none",
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major = element_line(color = "gray95"),
+    panel.grid.minor = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.line.y = element_blank(),
+    axis.line.x = element_line(color = "darkorange1"),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank() 
+  )
+
+figure3 <- ggarrange(
+  pdf, th,
+  labels = c("A", "B"),
+  ncol = 1,
+  heights = c(1.2,1),
+  align = "v"
+)
+#plot(figure3)
 
 
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_3.", exportFormat),
+  width = 1000,
+  height = 1000,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
 
+plot(figure3)
 
-
+dev.off()
 
 
 
@@ -167,12 +282,660 @@ qbeta(1:4 / 5, shape1 = 2, shape2 = 1)
 # Importing simulation data
 #_______________________________________________________________________________
 
-
 # Loading the results data file:
 # (can take a few seconds)
 load(file = "./output/ri.RData")
 
 colorScheme = "A" # we'll use this palette from Viridis
+
+ri$aggrRule <- factor(ri$aggrRule, levels = rev(levels(ri$aggrRule)))
+ri$baseline <-
+  ri$tqd == "top skewed" &
+  ri$scale == 5 &
+  ri$glh == 0.05 &
+  ri$truthNoise == 0 &
+  ri$nReviewersPerProp == 5 &
+  ri$competence == 0.8 &
+  ri$ruleVariant == "none" &
+  ri$aggrRule == "mean"
+
+
+
+# Figure 4 _____________________________________________________________________
+# Baseline: mean vs control
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$scale == 5 &
+    ri$glh == 0.05 &
+    ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule %in% c("mean", "control")
+)
+#rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
+df <- rii[,c("aggrRule", "CohensKappa20")] #"qualityEff", "kts", "KTC"
+
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_4.", exportFormat),
+  width = 900,
+  height = 900,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
+ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = aggrRule)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
+  geom_violin(fill = "gray80", color = "gray75", scale = "width") +
+  geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_discrete(limits = c("control", "mean")) +
+  scale_fill_manual(values = c("darkorange", "gray30")) +
+  labs(
+    title = "choice performance (k=20)",
+    y = "Cohen's kappa"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),
+    plot.subtitle = element_text(size = 12),
+    panel.background = element_rect(fill = "gray96"),
+    plot.background = element_rect(fill = "transparent", color=NA),
+    panel.border = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    axis.line = element_line(),
+    axis.title.x = element_blank(),
+    legend.position = "NA",
+  )
+dev.off()
+
+
+
+
+# Figure 5 _____________________________________________________________________
+# Varying panel size
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$scale == 5 &
+    ri$glh == 0.05 &
+    ri$truthNoise == 0 &
+    #ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule %in% c("mean", "control")
+)
+#rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
+rii$nReviewersPerProp <- factor(rii$nReviewersPerProp)
+#rii$nReviewersPerProp <- factor(
+#  rii$nReviewersPerProp,
+#  levels = c("1", as.character(unique(rii$nReviewersPerProp)))
+#)
+df <- rii[,c("aggrRule", "baseline", "nReviewersPerProp", "CohensKappa20")]
+df$condition <- 1 # for determining the fill color of the boxplots.
+df$condition[df$baseline == FALSE] <- 2
+df$condition[df$aggrRule == "control"] <- 3
+df$condition <- as.factor(df$condition)
+control <- subset(df, df$aggrRule == "control" & df$nReviewersPerProp == 5)
+control$nReviewersPerProp <- "1" # so that the control boxplot is shown first
+df <- subset(df, df$aggrRule == "mean")
+
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_5.", exportFormat),
+  width = 1300,
+  height = 900,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
+ggplot(df, aes(y = CohensKappa20, x = nReviewersPerProp, fill = condition)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
+  geom_violin(
+    data = rbind(df, control),
+    fill = "gray70", color = "gray60", scale = "width"
+  ) +
+  geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
+  geom_boxplot( # control condition
+    data = control, color = "black", alpha = 0.9, width = 0.3
+  ) +
+  scale_y_continuous(expand = c(0.01,0)) +
+  scale_x_discrete(limits = as.character(1:13)) +
+  scale_fill_manual(values = c("darkorange", "white", "gray30")) +
+  labs(
+    title = "choice performance (k=20)",
+    x = "panel size", y = "Cohen's kappa"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),
+    plot.subtitle = element_text(size = 12),
+    panel.background = element_rect(fill = "gray96"),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    #panel.border = element_rect(fill="transparent", color="gray50"),
+    panel.border = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    axis.line = element_line(),
+    #axis.title.x = element_blank(),
+    #axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "NA",
+    #legend.background = element_rect(fill = "transparent",color=NA),
+    #legend.box.background = element_rect(fill = "transparent",color=NA),
+    #text = element_text(size = 15)
+  )
+dev.off()
+
+
+
+
+# Figure 6 _____________________________________________________________________
+# Granularity of the grading scale
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    #ri$scale == 5 &
+    ri$glh == 0.05 &
+    ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule %in% c("mean", "control")
+)
+
+rii$scale <- sapply(rii$scale, FUN = function(x){paste0("L=", as.character(x))})
+rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
+df <- rii[,c("aggrRule", "baseline", "scale", "CohensKappa20")]
+df$condition <- 1 # for determining the fill color of the boxplots.
+df$condition[df$baseline == FALSE] <- 2
+df$condition[df$aggrRule == "control"] <- 3
+df$condition <- as.factor(df$condition)
+
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_6.", exportFormat),
+  width = 1200,
+  height = 900,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
+ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
+  geom_violin(fill = "gray70", color = "gray60", scale = "width", width = 0.8) +
+  geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
+  #geom_boxplot( # control condition
+  #  data = control, color = "black", alpha = 0.9, width = 0.3
+  #) +
+  facet_grid(cols = vars(scale), scales = "free_x", switch = "x") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_discrete(position = "top", limits = c("control", "mean")) +
+  scale_fill_manual(values = c("darkorange", "white", "gray30")) +
+  labs(
+    title = "choice performance (k=20)",
+    y = "Cohen's kappa"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),
+    plot.subtitle = element_text(size = 12),
+    panel.background = element_rect(fill = "gray96"),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.border = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    axis.line.y = element_line(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 0),
+    legend.position = "NA",
+  )
+dev.off()
+
+
+
+
+# Figure 7 _____________________________________________________________________
+# Aggregation rule
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$scale == 5 &
+    ri$glh == 0.05 &
+    ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none" #&
+    #ri$aggrRule %in% c("mean", "control")
+)
+
+df <- rii[,c("aggrRule", "baseline", "CohensKappa20")]
+df$condition <- 1 # for determining the fill color of the boxplots.
+df$condition[df$baseline == FALSE] <- 2
+df$condition[df$aggrRule %in% c("median", "lowest score", "highest score")] <- 3
+df$condition[df$aggrRule == "control"] <- 4
+df$condition <- as.factor(df$condition)
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_7.", exportFormat),
+  width = 1100,
+  height = 900,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
+ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
+  geom_violin(fill = "gray70", color = "gray60", scale = "width", width = 0.8) +
+  geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_discrete(
+    limits = c(
+      "control", "mean", "trimmed mean", "hypermean", "Borda count",
+      "majority judgment", "median", "lowest score", "highest score" 
+    )
+  ) +
+  scale_fill_manual(values = c("darkorange", "#ffd970", "white", "gray30")) +
+  labs(
+    title = "choice performance (k=20)",
+    y = "Cohen's kappa"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),
+    plot.subtitle = element_text(size = 12),
+    panel.background = element_rect(fill = "gray96"),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.border = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    axis.line.y = element_line(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 40, hjust = 1),
+    legend.position = "NA",
+  )
+dev.off()
+
+
+
+
+# Figure 8 _____________________________________________________________________
+# Diversity in interpretating the grading scale
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$scale == 5 &
+    #ri$glh == 0.05 &
+    ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule %in% c("mean", "control")
+)
+
+rii$glh <- sapply(rii$glh, FUN = function(x){paste0("D=", as.character(x))})
+rii$glh <- as.factor(rii$glh)
+#rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
+df <- rii[,c("aggrRule", "baseline", "glh", "CohensKappa20")]
+df$condition <- 1 # for determining the fill color of the boxplots.
+df$condition[df$baseline == FALSE] <- 2
+df$condition[df$aggrRule == "control"] <- 3
+df$condition <- as.factor(df$condition)
+
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_8.", exportFormat),
+  width = 1200,
+  height = 900,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
+ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
+  geom_violin(fill = "gray70", color = "gray60", scale = "width", width = 0.8) +
+  geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
+  #geom_boxplot( # control condition
+  #  data = control, color = "black", alpha = 0.9, width = 0.3
+  #) +
+  facet_grid(cols = vars(glh), scales = "free_x", switch = "x") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_discrete(position = "top", limits = c("control", "mean")) +
+  scale_fill_manual(values = c("darkorange", "white", "gray30")) +
+  labs(
+    title = "choice performance (k=20)",
+    y = "Cohen's kappa"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),
+    plot.subtitle = element_text(size = 12),
+    panel.background = element_rect(fill = "gray96"),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.border = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    axis.line.y = element_line(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 0),
+    legend.position = "NA",
+  )
+dev.off()
+
+
+
+
+# Robustness ___________________________________________________________________
+#
+# Reviewer competence
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$scale == 5 &
+    ri$glh == 0.05 &
+    ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    #ri$competence == 0.8 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule %in% c("mean", "control")
+)
+
+rii$competence <- sapply(
+  rii$competence,
+  FUN = function(x){paste0("C=", as.character(x))}
+)
+rii$competence <- as.factor(rii$competence)
+#rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
+df <- rii[,c("aggrRule", "baseline", "competence", "CohensKappa20")]
+df$condition <- 1 # for determining the fill color of the boxplots.
+df$condition[df$baseline == FALSE] <- 2
+df$condition[df$aggrRule == "control"] <- 3
+df$condition <- as.factor(df$condition)
+
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_competence.", exportFormat),
+  width = 1400,
+  height = 900,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
+ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
+  geom_violin(fill = "gray70", color = "gray60", scale = "width", width = 0.8) +
+  geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
+  #geom_boxplot( # control condition
+  #  data = control, color = "black", alpha = 0.9, width = 0.3
+  #) +
+  facet_grid(cols = vars(competence), scales = "free_x", switch = "x") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_discrete(position = "top", limits = c("control", "mean")) +
+  scale_fill_manual(values = c("darkorange", "white", "gray30")) +
+  labs(
+    title = "choice performance (k=20)",
+    y = "Cohen's kappa"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),
+    plot.subtitle = element_text(size = 12),
+    panel.background = element_rect(fill = "gray96"),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.border = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    axis.line.y = element_line(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 0),
+    legend.position = "NA",
+  )
+dev.off()
+
+#
+# True merit distribution
+rii <- subset(
+  ri,
+  #ri$tqd == "top skewed" &
+    ri$scale == 5 &
+    ri$glh == 0.05 &
+    ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule %in% c("mean", "control")
+)
+
+rii$tqd <- factor(rii$tqd, levels = unique(rii$tqd))
+#rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
+df <- rii[,c("aggrRule", "baseline", "tqd", "CohensKappa20")]
+df$condition <- 1 # for determining the fill color of the boxplots.
+df$condition[df$baseline == FALSE] <- 2
+df$condition[df$aggrRule == "control"] <- 3
+df$condition <- as.factor(df$condition)
+
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_tqd.", exportFormat),
+  width = 1200,
+  height = 900,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
+ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
+  geom_violin(fill = "gray70", color = "gray60", scale = "width", width = 0.8) +
+  geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
+  #geom_boxplot( # control condition
+  #  data = control, color = "black", alpha = 0.9, width = 0.3
+  #) +
+  facet_grid(cols = vars(tqd), scales = "free_x", switch = "x") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_discrete(position = "top", limits = c("control", "mean")) +
+  scale_fill_manual(values = c("darkorange", "white", "gray30")) +
+  labs(
+    title = "choice performance (k=20)",
+    y = "Cohen's kappa"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),
+    plot.subtitle = element_text(size = 12),
+    panel.background = element_rect(fill = "gray96"),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.border = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    axis.line.y = element_line(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 0),
+    legend.position = "NA",
+  )
+dev.off()
+
+
+#
+# Truth noise
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$scale == 5 &
+    ri$glh == 0.05 &
+    #ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule %in% c("mean", "control")
+)
+
+rii$truthNoise <- sapply(
+  rii$truthNoise,
+  FUN = function(x){paste0("truth noise = ", as.character(x))}
+)
+rii$truthNoise <- as.factor(rii$truthNoise)
+#rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
+df <- rii[,c("aggrRule", "baseline", "truthNoise", "CohensKappa20")]
+df$condition <- 1 # for determining the fill color of the boxplots.
+df$condition[df$baseline == FALSE] <- 2
+df$condition[df$aggrRule == "control"] <- 3
+df$condition <- as.factor(df$condition)
+
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_truthNoise.", exportFormat),
+  width = 1200,
+  height = 900,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
+ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
+  geom_violin(fill = "gray70", color = "gray60", scale = "width", width = 0.8) +
+  geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
+  #geom_boxplot( # control condition
+  #  data = control, color = "black", alpha = 0.9, width = 0.3
+  #) +
+  facet_grid(cols = vars(truthNoise), scales = "free_x", switch = "x") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_discrete(position = "top", limits = c("control", "mean")) +
+  scale_fill_manual(values = c("darkorange", "white", "gray30")) +
+  labs(
+    title = "choice performance (k=20)",
+    y = "Cohen's kappa"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),
+    plot.subtitle = element_text(size = 12),
+    panel.background = element_rect(fill = "gray96"),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.border = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    axis.line.y = element_line(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 0),
+    legend.position = "NA",
+  )
+dev.off()
+
+
+#
+# Funding rate (k)
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$scale == 5 &
+    ri$glh == 0.05 &
+    ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule %in% c("mean", "control")
+)
+
+rii$tqd <- factor(rii$tqd, levels = unique(rii$tqd))
+#rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
+df <- rii[,c(
+  "aggrRule", "baseline",
+  "CohensKappa5", "CohensKappa10", "CohensKappa20", "CohensKappa50"
+)]
+
+df <- reshape2::melt(df, id.vars = c("aggrRule", "baseline"))
+df$variable <- as.character(df$variable)
+df$variable[df$variable == "CohensKappa5"] <- "k=5"
+df$variable[df$variable == "CohensKappa10"] <- "k=10"
+df$variable[df$variable == "CohensKappa20"] <- "k=20"
+df$variable[df$variable == "CohensKappa50"] <- "k=50"
+df$variable <- factor(df$variable, levels = c(
+  "k=5", "k=10", "k=20", "k=50"
+))
+
+df$condition <- 1 # for determining the fill color of the boxplots.
+df$condition[df$baseline == FALSE | df$variable != "k=20"] <- 2
+df$condition[df$aggrRule == "control"] <- 3
+df$condition <- as.factor(df$condition)
+
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_K.", exportFormat),
+  width = 1400,
+  height = 900,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
+ggplot(df, aes(y = value, x = aggrRule, fill = condition)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
+  geom_violin(fill = "gray70", color = "gray60", scale = "width", width = 0.8) +
+  geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
+  facet_grid(cols = vars(variable), scales = "free_x", switch = "x") +
+  scale_y_continuous(expand = c(0.01,0)) +
+  scale_x_discrete(position = "top", limits = c("control", "mean")) +
+  scale_fill_manual(values = c("darkorange", "white", "gray30")) +
+  labs(
+    title = "choice performance (all levels of k)",
+    y = "Cohen's kappa"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),
+    plot.subtitle = element_text(size = 12),
+    panel.background = element_rect(fill = "gray96"),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.border = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    axis.line.y = element_line(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 0),
+    legend.position = "NA",
+  )
+dev.off()
+
+
+
+
+
+
+
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+# Old figures:
+
 
 
 

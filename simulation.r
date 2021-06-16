@@ -13,7 +13,6 @@ simulation <- function (
     alpha   = c(3),       # alpha (parameter in the beta distribution)
     beta    = c(3),       # beta  (parameter in the beta distribution)
     scale   = c(5),       # scale (expressed as number of categories)
-    #gradeLanguage = c("asymmetric"), # Grade language: symmetric or asymmetric
     glh     = c(0.1),     # grade language heterogeneity
     weights = c(1)        # relative weight of the criteria 
   ),
@@ -323,32 +322,26 @@ simulation <- function (
       # The deserved grade of the the k-th best in the merit ranking:
       thT <- submissions$trueGrade[submissions$trueRanking == k]
       
-      # The quality of the k-th best in the panel ranking:
-      thE <- x[xr == k]
-      
       # The list of proposals that deserve funding: those that have a true
       # quality at least equal to that of the k-th proposal in the merit
       # ranking.
-      # If there is a tie for the k-th position, we choose at random how to
-      # resolve it so that we have exactly k proposals to be deemed worthy of
-      # being funded.
-      acceptableLogic <- submissions$trueGrade > thT
-      tieForK <- submissions$trueGrade == thT
-      ifelse(
-        sum(tieForK) == 1, # if there aren't ties for the k-th position..
-        acceptableLogic <- acceptableLogic | tieForK, # ..then it's simple...
-        acceptableLogic[sample( # else, we break the tie in a random way
-          which(tieForK),
-          size = k - sum(acceptableLogic),
-          replace = FALSE
-        )] <- TRUE
-      )
-      #acceptableLogic <- submissions$trueGrade >= thT
+      acceptableLogic <- submissions$trueGrade >= thT
       acceptableOnes <- which(acceptableLogic)
       
+      # Because there might be ties for the k-th position, the number of 
+      # acceptable proposals might be equal to *or higher than* k.
+      # So, we need to re-calculate how many funding-worthy proposals there are,
+      # and we call that number "kPrime":
+      kPrime <- sum(acceptableLogic)
       
-      # Submissions above the equivalence class of the k-th best (We'll deal
-      # with the equivalence class x==thE right after):
+      
+      # Let's now look at the panel ranking. The panel has to find the kPrime
+      # best proposals.
+      # The quality of the kPrime-th best in the panel ranking:
+      thE <- x[xr == kPrime]
+      
+      # Submissions above the equivalence class of the kPrime-th best (We'll
+      # deal with the equivalence class x==thE right after):
       surelyAcceptedLogic <- x > thE
       nonDiscretionaryPanelChoice <- which(surelyAcceptedLogic)
       A <- length(nonDiscretionaryPanelChoice)
@@ -356,7 +349,7 @@ simulation <- function (
       # How many of these are right:
       A1 <- sum(nonDiscretionaryPanelChoice %in% acceptableOnes)
       
-      # Submissions in k-th equivalence class (i.e. the discretionary
+      # Submissions in kPrime-th equivalence class (i.e. the discretionary
       # component of panel's choice):
       maybeAcceptedLogic <- x == thE
       kthEquivClass <- which(maybeAcceptedLogic)
@@ -366,7 +359,7 @@ simulation <- function (
       B1 <- sum(kthEquivClass %in% acceptableOnes)
       
       # Choice performance for this level of k is:
-      rankingEfficacy[a] <- (((k - A) * (B1 / B)) + A1) / k
+      rankingEfficacy[a] <- (((kPrime - A) * (B1 / B)) + A1) / kPrime
       
       # ROC AUC
       ifelse(
@@ -400,7 +393,7 @@ simulation <- function (
         
         # The panel picks random proposals from the equivalence class until it
         # has k:
-        randomPick <- sample(kthEquivClass, size = k - A, replace = FALSE)
+        randomPick <- sample(kthEquivClass, size = kPrime - A, replace = FALSE)
         panelChoice <- surelyAcceptedLogic# | maybeAcceptedLogic
         panelChoice[randomPick] <- TRUE
         
