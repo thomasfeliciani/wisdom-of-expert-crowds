@@ -29,6 +29,8 @@ simulation <- function (
     "mean",
     "excludeExtremes",
     "hypermean",
+    "sunnyMean",
+    "gloomyMean",
     "lowestScore",
     "highestScore",
     "median",
@@ -36,6 +38,7 @@ simulation <- function (
     "bordaCount"),
   ruleVariant = "none",# "gloomy" "sunny"
   nAccepted = c(5, 10),
+  discreteMerit = FALSE,
   seed = runif(1, -999999999, 999999999),
   debug = FALSE
 )
@@ -56,6 +59,7 @@ simulation <- function (
     aggrRule = aggrRule,
     ruleVariant = ruleVariant,
     nAccepted = nAccepted,
+    discreteMerit = discreteMerit,
     seed = seed,
     timestamp = as.character(Sys.time())
   )
@@ -72,6 +76,14 @@ simulation <- function (
       shape2 = criteria$beta
     )
   )
+  if(discreteMerit) submissions$trueQuality <-
+    round(submissions$trueQuality * 20) / 20
+  
+  submissions$refQuality <- rnorm(
+    n = nSubmissions, mean = submissions$trueQuality, sd = truthNoise
+  )
+  if(discreteMerit) submissions$refQuality <-
+    truncate(round(submissions$refQuality * 20) / 20)
   
   # Based on their trueQuality, we calculate what grade they deserve in the
   # specified grading language:
@@ -82,10 +94,11 @@ simulation <- function (
   
   # There might be noise in the determination of the correct grade, too, since
   # the rating task might not be defined.
-  submissions$trueGrade <- findInterval(
-    truncate(rnorm(
-      n = nSubmissions, mean = submissions$trueQuality, sd = truthNoise
-    )),
+  submissions$refGrade <- findInterval(
+    submissions$refQuality,
+    #truncate(rnorm(
+    #  n = nSubmissions, mean = submissions$trueQuality, sd = truthNoise
+    #)),
     thresholds
   )
   
@@ -93,8 +106,14 @@ simulation <- function (
   # position of the submissions. We assume a strict ordering for now, so we
   # break all ties that occur.
   submissions$trueRanking <- rank(
-    1 - submissions$trueGrade,   # "1 -" allows to get low ranking number when
+    #1 - submissions$trueGrade,
+    1 - submissions$trueQuality, # "1 -" allows to get low ranking number when
     na.last = "keep",            # the true quality is high.
+    ties.method = "first"
+  )
+  submissions$refRanking <- rank(
+    1 - submissions$refQuality,
+    na.last = "keep",
     ties.method = "first"
   )
   
@@ -301,7 +320,8 @@ simulation <- function (
     ifelse(
       aggrRule[rule] %in% c("majorityJudgement", "bordaCount"),
       qualityEfficacy <- NA,
-      qualityEfficacy <- 1 - mean(abs(submissions$trueGrade - x))
+      qualityEfficacy <-
+        1 - mean(abs((submissions$refGrade / (criteria$scale - 1)) - x))
     )
     #oQualityEfficacy <- 1 - mean(abs(ox - x))
     
@@ -320,16 +340,19 @@ simulation <- function (
       k = nAccepted[a]
       
       # The deserved grade of the the k-th best in the merit ranking:
-      thT <- submissions$trueGrade[submissions$trueRanking == k]
+      #thT <- submissions$trueGrade[submissions$trueRanking == k]
+      thT <- submissions$refQuality[submissions$refRanking == k]
       
       # The list of proposals that deserve funding: those that have a true
       # quality at least equal to that of the k-th proposal in the merit
       # ranking.
-      acceptableLogic <- submissions$trueGrade >= thT
+      #acceptableLogic <- submissions$trueGrade >= thT
+      acceptableLogic <- submissions$refQuality >= thT
       acceptableOnes <- which(acceptableLogic)
       
-      # Because there might be ties for the k-th position, the number of 
-      # acceptable proposals might be equal to *or higher than* k.
+      # Because there might be ties for the k-th position (although extremely
+      # unlikely), the number of acceptable proposals might be equal to *or
+      # higher than* k.
       # So, we need to re-calculate how many funding-worthy proposals there are,
       # and we call that number "kPrime":
       kPrime <- sum(acceptableLogic)
@@ -353,7 +376,7 @@ simulation <- function (
       # component of panel's choice):
       maybeAcceptedLogic <- x == thE
       kthEquivClass <- which(maybeAcceptedLogic)
-      B <- length(kthEquivClass)
+      B <- sum(maybeAcceptedLogic)
       
       # Of which, these many are right:
       B1 <- sum(kthEquivClass %in% acceptableOnes)
@@ -426,7 +449,7 @@ simulation <- function (
     
     # For the next outcome metrics, we need to have the weak orderings of
     # submissions (based on their true quality and estimated quality).
-    weakOrdTrueGrade <- rank(submissions$trueGrade, ties.method = "max")
+    weakOrdRefGrade <- rank(submissions$refGrade, ties.method = "max")
     weakOrdEstimQuality <- rank(x, ties.method = "max")
     
     # Now we calculate the normalized Kendall-tau distance between the two
@@ -434,9 +457,9 @@ simulation <- function (
     # The Kendall distance is calculated for the whole ranking (kend), and for
     # the objectively-best proposals only (kendTop).
     ifelse(
-      length(table(weakOrdTrueGrade)) > 1,
+      length(table(weakOrdRefGrade)) > 1,
       ktd <- kendallTauDistance(
-        weakOrdTrueGrade,
+        weakOrdRefGrade,
         weakOrdEstimQuality
       )$normalized,
       ktd <- NA
@@ -468,13 +491,13 @@ simulation <- function (
     
     # We also calculate two correlation coefficients for the two rankings:
     ktc <- suppressWarnings(cor(
-      weakOrdTrueGrade,
+      weakOrdRefGrade,
       weakOrdEstimQuality,
       method = "kendall"
     ))
 
     spearman <- suppressWarnings(cor(
-      submissions$trueGrade,
+      submissions$refGrade,
       x,
       method = "spearman"
     ))

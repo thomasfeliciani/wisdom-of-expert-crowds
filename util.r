@@ -304,6 +304,33 @@ hypermean <- function(scores, dampingOutliers = TRUE) {
 
 
 
+# The next two functions, gloomyfy and sunnyfy, transform the scores matrix by 
+# transforming, for each submission, half the grades in NA. But they do so in
+# two complementary ways: gloomyfy transforms in NA the half with the highest
+# grades (thereby only keeping the most negative half), whereas sunnyfy does the
+# opposite.
+gloomyfy <- function(scores) {
+  return(t(apply(
+    X = scores,
+    MARGIN = 1,
+    FUN = function(x){
+      x[order(x)[(ceiling(sum(!is.na(x)) / 2) + 1):length(x)]] <- NA
+      return(x)
+    }
+  )))
+}
+sunnyfy <- function(scores) {
+  return(t(apply(
+    X = scores,
+    MARGIN = 1,
+    FUN = function(x){
+      x[order(x)[1:floor(sum(!is.na(x)) / 2)]] <- NA
+      return(x)
+    }
+  )))
+}
+
+
 
 # The aggregation function takes as input a matrix containing reviewers' grades
 # and returns a vector with the aggregated scores of each submission.
@@ -353,6 +380,26 @@ aggregate <- function (
     na.rm = TRUE
   )
   
+  if (rule == "sunnyMean") {
+    scores <- sunnyfy(scores)
+    aggregatedScores <- apply(
+      X = scores,
+      MARGIN = 1,
+      FUN = mean,
+      na.rm = TRUE
+    )
+  }
+  
+  if (rule == "gloomyMean") {
+    scores <- gloomyfy(scores)
+    aggregatedScores <- apply(
+      X = scores,
+      MARGIN = 1,
+      FUN = mean,
+      na.rm = TRUE
+    )
+  }
+    
   if (rule == "excludeExtremes" | rule == "trimmedMean"){
     aggregatedScores <- apply(
       X = scores,
@@ -376,34 +423,6 @@ aggregate <- function (
       modifiedBordaCount(scores)$bordaCount
   
   return(aggregatedScores)
-}
-
-
-
-# The next two functions, gloomyfy and sunnyfy, transform the scores matrix by 
-# transforming, for each submission, half the grades in NA. But they do so in
-# two complementary ways: gloomyfy transforms in NA the half with the highest
-# grades (thereby only keeping the most negative half), whereas sunnyfy does the
-# opposite.
-gloomyfy <- function(scores) {
-  return(t(apply(
-    X = scores,
-    MARGIN = 1,
-    FUN = function(x){
-      x[order(x)[(ceiling(length(x) / 2) + 1):length(x)]] <- NA
-      return(x)
-    }
-  )))
-}
-sunnyfy <- function(scores) {
-  return(t(apply(
-    X = scores,
-    MARGIN = 1,
-    FUN = function(x){
-      x[order(x)[1:floor(length(x) / 2)]] <- NA
-      return(x)
-    }
-  )))
 }
 
 

@@ -10,7 +10,7 @@ library(ggpubr)
 library(viridis)
 source("simulation.r")
 
-exportFormat = "png" # "png" or "tiff" are supported.
+exportFormat = "png" #"png" or "tiff" are supported.
 
 
 
@@ -297,7 +297,11 @@ ri$baseline <-
   ri$nReviewersPerProp == 5 &
   ri$competence == 0.8 &
   ri$ruleVariant == "none" &
-  ri$aggrRule == "mean"
+  ri$aggrRule == "mean" &
+  ri$discreteMerit == FALSE
+
+ri$commonUnderstGrades <- 1 - ri$glh
+
 
 
 
@@ -307,21 +311,25 @@ rii <- subset(
   ri,
   ri$tqd == "top skewed" &
     ri$scale == 5 &
-    ri$glh == 0.05 &
+    ri$commonUnderstGrades == 0.95 &
     ri$truthNoise == 0 &
     ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule %in% c("mean", "control")
+    ri$aggrRule %in% c("mean", "control") &
+    ri$discreteMerit == FALSE
 )
+rii$aggrRule <- as.character(rii$aggrRule)
+rii$aggrRule[rii$aggrRule == "mean"] <- "baseline"
+rii$aggrRule <- as.factor(rii$aggrRule)
 #rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
 df <- rii[,c("aggrRule", "CohensKappa20")] #"qualityEff", "kts", "KTC"
 
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_4.", exportFormat),
-  width = 900,
-  height = 900,
+  width = 920,
+  height = 850,
   units = "px",
   res = 300
 )
@@ -333,11 +341,11 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = aggrRule)) +
   geom_violin(fill = "gray80", color = "gray75", scale = "width") +
   geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
   scale_y_continuous(expand = c(0,0)) +
-  scale_x_discrete(limits = c("control", "mean")) +
+  scale_x_discrete(limits = c("control", "baseline")) +
   scale_fill_manual(values = c("darkorange", "gray30")) +
   labs(
-    title = "choice performance (k=20)",
-    y = "Cohen's kappa"
+    #title = "choice performance (k=20)",
+    y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -363,12 +371,13 @@ rii <- subset(
   ri,
   ri$tqd == "top skewed" &
     ri$scale == 5 &
-    ri$glh == 0.05 &
+    ri$commonUnderstGrades == 0.95 &
     ri$truthNoise == 0 &
     #ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule %in% c("mean", "control")
+    ri$aggrRule %in% c("mean", "control") &
+    ri$discreteMerit == FALSE
 )
 #rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
 rii$nReviewersPerProp <- factor(rii$nReviewersPerProp)
@@ -388,8 +397,8 @@ df <- subset(df, df$aggrRule == "mean")
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_5.", exportFormat),
-  width = 1300,
-  height = 900,
+  width = 1320,
+  height = 850,
   units = "px",
   res = 300
 )
@@ -407,11 +416,11 @@ ggplot(df, aes(y = CohensKappa20, x = nReviewersPerProp, fill = condition)) +
     data = control, color = "black", alpha = 0.9, width = 0.3
   ) +
   scale_y_continuous(expand = c(0.01,0)) +
-  scale_x_discrete(limits = as.character(1:13)) +
+  scale_x_discrete(limits = as.character(1:12)) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
-    title = "choice performance (k=20)",
-    x = "panel size", y = "Cohen's kappa"
+    #title = "choice performance (k=20)",
+    x = "panel size", y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -442,16 +451,20 @@ rii <- subset(
   ri,
   ri$tqd == "top skewed" &
     #ri$scale == 5 &
-    ri$glh == 0.05 &
-    ri$truthNoise == 0 &
+    ri$commonUnderstGrades == 0.95 &
+    ri$truthNoise == 0 & ########
     ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule %in% c("mean", "control")
+    ri$aggrRule %in% c("mean", "control") &
+    ri$discreteMerit == FALSE
 )
 
 rii$scale <- sapply(rii$scale, FUN = function(x){paste0("L=", as.character(x))})
-rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
+rii$scale <- factor(
+  rii$scale,
+  levels = c("L=2", "L=3", "L=4", "L=5", "L=7", "L=10")
+)
 df <- rii[,c("aggrRule", "baseline", "scale", "CohensKappa20")]
 df$condition <- 1 # for determining the fill color of the boxplots.
 df$condition[df$baseline == FALSE] <- 2
@@ -461,8 +474,8 @@ df$condition <- as.factor(df$condition)
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_6.", exportFormat),
-  width = 1200,
-  height = 900,
+  width = 1520,
+  height = 800,
   units = "px",
   res = 300
 )
@@ -481,8 +494,8 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   scale_x_discrete(position = "top", limits = c("control", "mean")) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
-    title = "choice performance (k=20)",
-    y = "Cohen's kappa"
+    #title = "choice performance (k=20)",
+    y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -492,10 +505,11 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
     panel.border = element_blank(),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
-    panel.spacing = unit(1.5, "lines"),
+    panel.spacing = unit(0.5, "lines"),
     axis.line.y = element_line(),
     axis.title.x = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 0),
+    axis.text.x = element_blank(),#element_text(angle = 30, hjust = 0),
+    axis.ticks.x = element_blank(),
     legend.position = "NA",
   )
 dev.off()
@@ -509,24 +523,35 @@ rii <- subset(
   ri,
   ri$tqd == "top skewed" &
     ri$scale == 5 &
-    ri$glh == 0.05 &
+    ri$commonUnderstGrades == 0.95 &
     ri$truthNoise == 0 &
     ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
-    ri$ruleVariant == "none" #&
-    #ri$aggrRule %in% c("mean", "control")
+    ri$ruleVariant == "none" &
+    #ri$aggrRule %in% c("mean", "control") &
+    ri$discreteMerit == FALSE
 )
 
 df <- rii[,c("aggrRule", "baseline", "CohensKappa20")]
-df$condition <- 1 # for determining the fill color of the boxplots.
-df$condition[df$baseline == FALSE] <- 2
-df$condition[df$aggrRule %in% c("median", "lowest score", "highest score")] <- 3
-df$condition[df$aggrRule == "control"] <- 4
-df$condition <- as.factor(df$condition)
+df$baseline[df$aggrRule == "control"] <- 2
+df$baseline <- as.factor(df$baseline)
+df$boost <- "discrim. boosting" # Boosting vs non-boosting
+nonBoostingRules <- c("control", "median", "lowest score", "highest score")
+df$boost[df$aggrRule %in% nonBoostingRules] <- "non discrim. boosting"
+df$boost <- factor(
+  df$boost, levels = c("non discrim. boosting", "discrim. boosting"))
+df$aggrRule <- factor(
+  df$aggrRule,
+  levels = c(
+    "control", "median", "lowest score", "highest score",
+    "mean", "trimmed mean", "hypermean", "gloomy mean", "sunny mean",
+    "Borda count", "majority judgment"
+  )
+)
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_7.", exportFormat),
-  width = 1100,
+  width = 1320,
   height = 900,
   units = "px",
   res = 300
@@ -534,21 +559,22 @@ figureParameters <- list(
 if(exportFormat == "png") {do.call(png, figureParameters)} else {
   do.call(tiff, figureParameters)}
 
-ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
+ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = baseline)) +
   geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
   geom_violin(fill = "gray70", color = "gray60", scale = "width", width = 0.8) +
   geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
-  scale_y_continuous(expand = c(0,0)) +
-  scale_x_discrete(
-    limits = c(
-      "control", "mean", "trimmed mean", "hypermean", "Borda count",
-      "majority judgment", "median", "lowest score", "highest score" 
-    )
+  facet_grid(
+    cols = vars(boost),
+    scales = "free_x",
+    drop = TRUE,
+    space = "free"#, switch = "x"
   ) +
-  scale_fill_manual(values = c("darkorange", "#ffd970", "white", "gray30")) +
+  scale_y_continuous(expand = c(0.015,0)) +
+  scale_x_discrete(position = "bottom") +#"top") +
+  scale_fill_manual(values = c("white", "darkorange", "gray30")) +
   labs(
-    title = "choice performance (k=20)",
-    y = "Cohen's kappa"
+    #title = "choice performance (k=20)",
+    y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -558,10 +584,10 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
     panel.border = element_blank(),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
-    panel.spacing = unit(1.5, "lines"),
-    axis.line.y = element_line(),
+    panel.spacing = unit(1, "lines"),
+    axis.line = element_line(),
     axis.title.x = element_blank(),
-    axis.text.x = element_text(angle = 40, hjust = 1),
+    axis.text.x = element_text(angle = 35, hjust = 1),
     legend.position = "NA",
   )
 dev.off()
@@ -575,18 +601,22 @@ rii <- subset(
   ri,
   ri$tqd == "top skewed" &
     ri$scale == 5 &
-    #ri$glh == 0.05 &
+    #ri$commonUnderstGrades == 0.95 &
     ri$truthNoise == 0 &
     ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule %in% c("mean", "control")
+    ri$aggrRule %in% c("mean", "control") &
+    ri$discreteMerit == FALSE
 )
 
-rii$glh <- sapply(rii$glh, FUN = function(x){paste0("D=", as.character(x))})
-rii$glh <- as.factor(rii$glh)
+rii$commonUnderstGrades <- sapply(
+  rii$commonUnderstGrades,
+  FUN = function(x){paste0("U=", as.character(x))}
+)
+rii$commonUnderstGrades <- as.factor(rii$commonUnderstGrades)
 #rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
-df <- rii[,c("aggrRule", "baseline", "glh", "CohensKappa20")]
+df <- rii[,c("aggrRule", "baseline", "commonUnderstGrades", "CohensKappa20")]
 df$condition <- 1 # for determining the fill color of the boxplots.
 df$condition[df$baseline == FALSE] <- 2
 df$condition[df$aggrRule == "control"] <- 3
@@ -595,8 +625,8 @@ df$condition <- as.factor(df$condition)
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_8.", exportFormat),
-  width = 1200,
-  height = 900,
+  width = 1220,
+  height = 800,
   units = "px",
   res = 300
 )
@@ -610,13 +640,13 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   #geom_boxplot( # control condition
   #  data = control, color = "black", alpha = 0.9, width = 0.3
   #) +
-  facet_grid(cols = vars(glh), scales = "free_x", switch = "x") +
+  facet_grid(cols = vars(commonUnderstGrades), scales = "free_x", switch = "x")+
   scale_y_continuous(expand = c(0,0)) +
   scale_x_discrete(position = "top", limits = c("control", "mean")) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
-    title = "choice performance (k=20)",
-    y = "Cohen's kappa"
+    #title = "choice performance (k=20)",
+    y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -629,10 +659,15 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
     panel.spacing = unit(1.5, "lines"),
     axis.line.y = element_line(),
     axis.title.x = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 0),
+    axis.text.x = element_blank(),#element_text(angle = 30, hjust = 0),
+    axis.ticks.x = element_blank(),
     legend.position = "NA",
   )
 dev.off()
+
+
+
+
 
 
 
@@ -649,7 +684,8 @@ rii <- subset(
     ri$nReviewersPerProp == 5 &
     #ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule %in% c("mean", "control")
+    ri$aggrRule %in% c("mean", "control") &
+    ri$discreteMerit == FALSE
 )
 
 rii$competence <- sapply(
@@ -667,8 +703,8 @@ df$condition <- as.factor(df$condition)
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_competence.", exportFormat),
-  width = 1400,
-  height = 900,
+  width = 1420,
+  height = 800,
   units = "px",
   res = 300
 )
@@ -687,8 +723,8 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   scale_x_discrete(position = "top", limits = c("control", "mean")) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
-    title = "choice performance (k=20)",
-    y = "Cohen's kappa"
+    #title = "choice performance (k=20)",
+    y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -701,7 +737,8 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
     panel.spacing = unit(1.5, "lines"),
     axis.line.y = element_line(),
     axis.title.x = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 0),
+    axis.text.x = element_blank(),#element_text(angle = 30, hjust = 0),
+    axis.ticks.x = element_blank(),
     legend.position = "NA",
   )
 dev.off()
@@ -711,13 +748,14 @@ dev.off()
 rii <- subset(
   ri,
   #ri$tqd == "top skewed" &
-    ri$scale == 5 &
+    ri$scale == 5 & 
     ri$glh == 0.05 &
     ri$truthNoise == 0 &
     ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule %in% c("mean", "control")
+    ri$aggrRule %in% c("mean", "control") &
+    ri$discreteMerit == FALSE
 )
 
 rii$tqd <- factor(rii$tqd, levels = unique(rii$tqd))
@@ -731,8 +769,8 @@ df$condition <- as.factor(df$condition)
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_tqd.", exportFormat),
-  width = 1200,
-  height = 900,
+  width = 1220,
+  height = 800,
   units = "px",
   res = 300
 )
@@ -751,8 +789,8 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   scale_x_discrete(position = "top", limits = c("control", "mean")) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
-    title = "choice performance (k=20)",
-    y = "Cohen's kappa"
+    #title = "choice performance (k=20)",
+    y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -765,7 +803,8 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
     panel.spacing = unit(1.5, "lines"),
     axis.line.y = element_line(),
     axis.title.x = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 0),
+    axis.text.x = element_blank(),#element_text(angle = 30, hjust = 0),
+    axis.ticks.x = element_blank(),
     legend.position = "NA",
   )
 dev.off()
@@ -782,7 +821,8 @@ rii <- subset(
     ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule %in% c("mean", "control")
+    ri$aggrRule %in% c("mean", "control") &
+    ri$discreteMerit == FALSE
 )
 
 rii$truthNoise <- sapply(
@@ -800,8 +840,8 @@ df$condition <- as.factor(df$condition)
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_truthNoise.", exportFormat),
-  width = 1200,
-  height = 900,
+  width = 1220,
+  height = 800,
   units = "px",
   res = 300
 )
@@ -820,8 +860,8 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   scale_x_discrete(position = "top", limits = c("control", "mean")) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
-    title = "choice performance (k=20)",
-    y = "Cohen's kappa"
+    #title = "choice performance (k=20)",
+    y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -831,10 +871,11 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
     panel.border = element_blank(),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
-    panel.spacing = unit(1.5, "lines"),
+    panel.spacing = unit(1, "lines"),
     axis.line.y = element_line(),
     axis.title.x = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 0),
+    axis.text.x = element_blank(),#element_text(angle = 30, hjust = 0),
+    axis.ticks.x = element_blank(),
     legend.position = "NA",
   )
 dev.off()
@@ -851,7 +892,8 @@ rii <- subset(
     ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule %in% c("mean", "control")
+    ri$aggrRule %in% c("mean", "control") &
+    ri$discreteMerit == FALSE
 )
 
 rii$tqd <- factor(rii$tqd, levels = unique(rii$tqd))
@@ -879,8 +921,8 @@ df$condition <- as.factor(df$condition)
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_K.", exportFormat),
-  width = 1400,
-  height = 900,
+  width = 1420,
+  height = 800,
   units = "px",
   res = 300
 )
@@ -896,8 +938,8 @@ ggplot(df, aes(y = value, x = aggrRule, fill = condition)) +
   scale_x_discrete(position = "top", limits = c("control", "mean")) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
-    title = "choice performance (all levels of k)",
-    y = "Cohen's kappa"
+    #title = "choice performance (all levels of k)",
+    y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -910,10 +952,106 @@ ggplot(df, aes(y = value, x = aggrRule, fill = condition)) +
     panel.spacing = unit(1.5, "lines"),
     axis.line.y = element_line(),
     axis.title.x = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 0),
+    axis.text.x = element_blank(),#element_text(angle = 30, hjust = 0),
+    axis.ticks.x = element_blank(),
     legend.position = "NA",
   )
 dev.off()
+
+
+
+#### Extra #####################################################################
+# Control vs baseline vs language enhancement
+rii <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$scale == 5 &
+    ri$glh == 0.05 &
+    ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule %in% c("mean", "control") &
+    ri$discreteMerit == FALSE
+)
+riiEnhanced <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$scale == 10 &
+    ri$glh == 0 &
+    ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 0.8 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule == "majority judgment" &
+    ri$discreteMerit == FALSE
+)
+#ggplot(riiEnhanced, aes(x = aggrRule,y = CohensKappa20)) + geom_boxplot()
+
+rii <- rbind(rii, riiEnhanced)
+rii$aggrRule <- as.character(rii$aggrRule)
+rii$aggrRule[rii$aggrRule == "mean"] <- "baseline"
+rii$aggrRule[rii$aggrRule == "majority judgment"]<-"grading scale\nenhancements"
+rii$aggrRule <- as.factor(rii$aggrRule)
+#rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
+df <- rii[,c("aggrRule", "CohensKappa20")] #"qualityEff", "kts", "KTC"
+
+
+figureParameters <- list(
+  filename = paste0("./outputGraphics/figure_4extra.", exportFormat),
+  width = 1120,
+  height = 850,
+  units = "px",
+  res = 300
+)
+if(exportFormat == "png") {do.call(png, figureParameters)} else {
+  do.call(tiff, figureParameters)}
+
+ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = aggrRule)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
+  geom_violin(fill = "gray80", color = "gray75", scale = "width") +
+  geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_discrete(
+    limits = c("control", "baseline","grading scale\nenhancements")) +
+  scale_fill_manual(values = c("darkorange", "gray30", "white")) +
+  labs(
+    #title = "choice performance (k=20)",
+    y = "choice performance\n(Cohen's kappa, k=20)"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),
+    plot.subtitle = element_text(size = 12),
+    panel.background = element_rect(fill = "gray96"),
+    plot.background = element_rect(fill = "transparent", color=NA),
+    panel.border = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    axis.line = element_line(),
+    axis.title.x = element_blank(),
+    legend.position = "NA",
+  )
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

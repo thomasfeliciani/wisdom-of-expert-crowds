@@ -17,18 +17,21 @@ smartParameterSpace <- TRUE
 #
 # We start with the variables that will vary *between* simulations: 
 tqd <- c ("top skew", "bottom skew") #"symmetric bell",
-scale <- c(2, 5, 10)
+scale <- c(2, 3, 4, 5, 7, 10)
 glh <- c(0, 0.05, 0.1)#0:4/20#0:8/40
 nSubmissions <- c(100)
-nReviewersPerProp <- 2:13
-truthNoise <- c(0, 0.2, 0.4) ###########
+nReviewersPerProp <- 2:12
+truthNoise <- c(0, 0.2, 0.4)
+discreteMerit <- c(TRUE, FALSE)
 reviewerCompetence <- c(1, 0.9, 0.8, 0.6)
-ruleVariant <- c("none", "gloomy", "sunny")
+ruleVariant <- "none"#c("none", "gloomy", "sunny")
 aggrRule <- c(
   "control",
   "mean",
   "excludeExtremes",
   "hypermean",
+  "sunnyMean",
+  "gloomyMean",
   "lowestScore",
   "highestScore",
   "median",
@@ -42,6 +45,7 @@ battery <- expand.grid(
   nSubmissions = nSubmissions,
   nReviewersPerProp = nReviewersPerProp,
   truthNoise = truthNoise,
+  discreteMerit = discreteMerit,
   reviewerError = 1 - reviewerCompetence,
   ruleVariant = ruleVariant,
   aggrRule = aggrRule
@@ -57,7 +61,8 @@ baseline = data.frame(t(c(
   glh = 0.05,
   nSubmissions = 100,
   nReviewersPerProp = 5,
-  truthNoise = 0, ###########
+  truthNoise = 0,
+  discreteMerit = FALSE,
   reviewerError = 0.2,
   ruleVariant = "none",
   aggrRule = "mean"
@@ -69,14 +74,30 @@ baseline = data.frame(t(c(
 if (smartParameterSpace) {
   variables <- c(
     "tqd", "scale", "glh", "nSubmissions", "nReviewersPerProp",
-    "truthNoise", "reviewerError", "ruleVariant", "aggrRule")
+    "truthNoise", "discreteMerit", "reviewerError", "ruleVariant", "aggrRule")
   #closeToBaseline <- apply(
   battery$distToBaseline <- 0
   for (r in 1:nrow(battery)) {
     battery$distToBaseline[r] <- sum(battery[r,variables] != baseline)
   }
   
-  battery <- battery[battery$distToBaseline <= 2,]
+  # We also keep this param. config because it's of special interest.
+  # This configuration has all grading-scale-related enhancements:
+  # High granularity, no GL heterogeneity, and any of the aggregation rules.
+  battery$distToBaseline[
+    battery$tqd == "top skew" &
+    battery$scale == 10 & ###
+    battery$glh == 0 & ###
+    battery$nSubmissions == 100 &
+    battery$nReviewersPerProp == 5 &
+    battery$truthNoise == 0 &
+    battery$discreteMerit == FALSE &
+    battery$reviewerError == "0.2" &
+    battery$ruleVariant == "none"# &
+    #battery$aggrRule == "mean" ###
+  ] <- 1
+  
+  battery <- battery[battery$distToBaseline <= 3,]
   battery$distToBaseline <- NULL
 }
 #x = battery[2223,]
@@ -144,6 +165,7 @@ runBattery <- function(battery, debug = FALSE){
       aggrRule = as.character(battery$aggrRule[b]),
       ruleVariant = battery$ruleVariant[b],
       nAccepted = nAccepted,
+      discreteMerit = battery$discreteMerit[b],
       seed = randomSeeds[b]
     )
     
@@ -162,6 +184,7 @@ runBattery <- function(battery, debug = FALSE){
       nReviewersPerProp = r$parameters$nReviewersPerProp,
       nPropPerReviewer = r$parameters$nPropPerReviewer,
       truthNoise = r$parameters$truthNoise,
+      discreteMerit = r$parameters$discreteMerit,
       reviewerError = r$parameters$reviewerError
     )
     
@@ -193,6 +216,8 @@ runBattery <- function(battery, debug = FALSE){
     df$aggrRule[df$aggrRule == "excludeExtremes"] <- "trimmed mean"
     df$aggrRule[df$aggrRule == "lowestScore"] <- "lowest score"
     df$aggrRule[df$aggrRule == "highestScore"] <- "highest score"
+    df$aggrRule[df$aggrRule == "sunnyMean"] <- "sunny mean"
+    df$aggrRule[df$aggrRule == "gloomyMean"] <- "gloomy mean"
     df$aggrRule[df$aggrRule == "majorityJudgement"] <- "majority judgment"
     df$aggrRule[is.na(df$aggrRule)] <- "null"
     
@@ -251,7 +276,8 @@ ri$aggrRule <- factor(
   ri$aggrRule,
   levels = rev(c(
     "median", "mean", "trimmed mean", "hypermean", "majority judgment",
-    "lowest score", "highest score", "Borda count", "control"))
+    "lowest score", "highest score", "gloomy mean", "sunny mean",
+    "Borda count", "control"))
 )
 
 
