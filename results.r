@@ -315,7 +315,7 @@ colorScheme = "A" # we'll use this palette from Viridis
 
 ri$aggrRule <- factor(ri$aggrRule, levels = rev(levels(ri$aggrRule)))
 ri$baseline <-
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
   ri$scale == 5 &
   ri$glh == 0.05 &
   ri$truthNoise == 0 &
@@ -334,7 +334,7 @@ ri$commonUnderstGrades <- 1 - ri$glh
 # Baseline: mean vs control
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$commonUnderstGrades == 0.95 &
     ri$truthNoise == 0 &
@@ -394,7 +394,7 @@ dev.off()
 # Varying panel size
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$commonUnderstGrades == 0.95 &
     ri$truthNoise == 0 &
@@ -445,7 +445,7 @@ ggplot(df, aes(y = CohensKappa20, x = nReviewersPerProp, fill = condition)) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
     #title = "choice performance (k=20)",
-    x = "panel size", y = "choice performance\n(Cohen's kappa, k=20)"
+    x = "panel size (N)", y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -474,7 +474,7 @@ dev.off()
 # Granularity of the grading scale
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     #ri$scale == 5 &
     ri$commonUnderstGrades == 0.95 &
     ri$truthNoise == 0 & ########
@@ -545,7 +545,7 @@ dev.off()
 # Aggregation rule
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$commonUnderstGrades == 0.95 &
     ri$truthNoise == 0 &
@@ -575,7 +575,7 @@ df$aggrRule <- factor(
 
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_7.", exportFormat),
+  filename = paste0("./outputGraphics/figure_5.", exportFormat),
   width = 1320,
   height = 900,
   units = "px",
@@ -624,7 +624,7 @@ dev.off()
 # Diversity in interpretating the grading scale
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     #ri$commonUnderstGrades == 0.95 &
     ri$truthNoise == 0 &
@@ -702,7 +702,7 @@ dev.off()
 # Implicit noise (lambda)
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$glh == 0.05 &
     ri$truthNoise == 0 &
@@ -772,7 +772,7 @@ dev.off()
 # Merit condition (aka true merit distribution)
 rii <- subset(
   ri,
-  #ri$tqd == "top skewed" &
+  #ri$tqd == "high" &
   ri$scale == 5 & 
     ri$glh == 0.05 &
     ri$truthNoise == 0 &
@@ -785,7 +785,7 @@ rii <- subset(
     ri$discreteMerit == FALSE
 )
 rii$tqd[rii$tqd == "bottom skewed"] <- "low"
-rii$tqd[rii$tqd == "top skewed"] <- "high"
+rii$tqd[rii$tqd == "high"] <- "high"
 rii$tqd[rii$tqd == "bimodal"] <- "bimodal"
 
 rii$tqd <- factor(rii$tqd, levels = c("high", "low", "bimodal"))
@@ -851,7 +851,7 @@ dev.off()
 # Truth noise
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$glh == 0.05 &
     #ri$truthNoise == 0 &
@@ -922,7 +922,7 @@ dev.off()
 # Funding rate (k)
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$glh == 0.05 &
     ri$truthNoise == 0 &
@@ -1001,7 +1001,7 @@ dev.off()
 # Control vs baseline vs language enhancement
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$glh == 0.05 &
     ri$truthNoise == 0 &
@@ -1011,21 +1011,34 @@ rii <- subset(
     ri$aggrRule %in% c("mean") &
     ri$discreteMerit == FALSE
 )
+#x <- subset(
+#  ri,
+#  ri$tqd == "high" &
+#    ri$scale == 10 &
+#    ri$glh == 0 &
+#    ri$truthNoise == 0 &
+#    ri$nReviewersPerProp == 5 &
+#    ri$competence == 0.8 &
+#    ri$ruleVariant == "none" &
+#    #ri$aggrRule == "majority judgment" &
+#    ri$discreteMerit == FALSE
+#)
+#boxplot(x$CohensKappa20 ~ as.factor(x$aggrRule))
 riiCommunic <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 10 &
     ri$glh == 0 &
     ri$truthNoise == 0 &
     ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule == "majority judgment" &
+    ri$aggrRule == "trimmed mean" &
     ri$discreteMerit == FALSE
 )
 riiEval <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$glh == 0.05 &
     ri$truthNoise == 0 &
@@ -1138,7 +1151,7 @@ dev.off()
 # Subsetting the runs from the baseline parameter configuration:
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$glh == 0.1 &
     ri$nReviewersPerProp == 5 &
@@ -1301,7 +1314,7 @@ dev.off()
 # 
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$glh == 0.1 &
     ri$ruleVariant == "none"
@@ -1378,7 +1391,7 @@ dev.off()
 # grade language granularity (L) (top-skewed merit)
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     #ri$scale == 5 &
     ri$glh == 0.1 &
     ri$nReviewersPerProp == 5 &
@@ -1551,7 +1564,7 @@ dev.off()
 # grade language heterogeneity (h) and competence (c)
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     #ri$glh == 0.1 &
     ri$nReviewersPerProp == 5 &
@@ -1688,7 +1701,7 @@ rm(s)
 # Alternative measures.
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$scale == 5 &
     ri$glh == 0.1 &
     ri$nReviewersPerProp == 5 &
@@ -1972,7 +1985,7 @@ smallBattery <- function(nSubmissions = 100, sigma = 0.2) {
   
   ri$tqd <- "uniform"
   ri$tqd[ri$alpha == 2 & ri$beta == 5] <- "bottom skewed"
-  ri$tqd[ri$alpha == 5 & ri$beta == 2] <- "top skewed"
+  ri$tqd[ri$alpha == 5 & ri$beta == 2] <- "high"
   ri$alpha <- ri$beta <- NULL
   ri$competence <- 1 - ri$reviewerError
   
@@ -1992,7 +2005,7 @@ plotRankPerf <- function(ri){
   
   rii <- subset(
     ri,
-    ri$tqd == "top skewed" &
+    ri$tqd == "high" &
       ri$scale == 5 &
       ri$glh == 0.1 &
       ri$nReviewersPerProp == 5 &
@@ -2059,7 +2072,7 @@ plotChoicePerf <- function(ri){
   
   rii <- subset(
     ri,
-    ri$tqd == "top skewed" &
+    ri$tqd == "high" &
       ri$scale == 5 &
       ri$glh == 0.1 &
       ri$nReviewersPerProp == 5 &
@@ -2231,7 +2244,7 @@ palette <- viridisLite::viridis(
 
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     ri$aggrRule %in% c("mean", "null", "lowest score", "highest score") & ###
     ri$scale == 5 &
     ri$glh == 0.05 &                     ###
@@ -2331,7 +2344,7 @@ ggplot(dft, aes(y = value, x = family, fill = aggrRule, color = aggrRule)) +
 
 rii <- subset(
   ri,
-  ri$tqd == "top skewed" &
+  ri$tqd == "high" &
     #ri$aggrRule %in% c("mean", "null", "lowest score", "highest score") & ###
     #ri$scale == 5 &
     ri$glh == 0.05 &                     ###

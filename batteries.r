@@ -16,13 +16,13 @@ smartParameterSpace <- TRUE
 # Setting up the parameter space.
 #
 # We start with the variables that will vary *between* simulations: 
-tqd <- c ("top skew", "bottom skew") #"symmetric bell",
+tqd <- c ("high", "low", "bimodal") #"symmetric bell",
 scale <- c(2, 3, 4, 5, 7, 10)
 glh <- c(0, 0.05, 0.1)#0:4/20#0:8/40
 nSubmissions <- c(100)
 nReviewersPerProp <- 2:12
-truthNoise <- c(0, 0.2, 0.4)
-discreteMerit <- c(TRUE, FALSE)
+truthNoise <- 0#c(0, 0.2, 0.4)
+discreteMerit <- FALSE#c(TRUE, FALSE)
 reviewerCompetence <- c(1, 0.9, 0.8, 0.6)
 ruleVariant <- "none"#c("none", "gloomy", "sunny")
 aggrRule <- c(
@@ -56,7 +56,7 @@ battery <- expand.grid(
 # be simulated.
 # To do this, we first define a baseline parameter configuration:
 baseline = data.frame(t(c(
-  tqd = "top skew",
+  tqd = "high",
   scale = 5,
   glh = 0.05,
   nSubmissions = 100,
@@ -85,7 +85,7 @@ if (smartParameterSpace) {
   # This configuration has all grading-scale-related enhancements:
   # High granularity, no GL heterogeneity, and any of the aggregation rules.
   battery$distToBaseline[
-    battery$tqd == "top skew" &
+    battery$tqd == "high" &
     battery$scale == 10 & ###
     battery$glh == 0 & ###
     battery$nSubmissions == 100 &
@@ -134,25 +134,26 @@ runBattery <- function(battery, debug = FALSE){
     
     if (debug) print(paste("seed:", randomSeeds[b]))
     
-    alpha <- beta <- 1
-    if (battery$tqd[b] == "symmetric bell") {
-      alpha <- beta <- 3
-    }
-    if (battery$tqd[b] == "top skew") {
-      alpha <- 5
-      beta <- 2
-    }
-    if (battery$tqd[b] == "bottom skew") {
-      alpha <- 2
-      beta <- 5
-    }
+    #alpha <- beta <- 1
+    #if (battery$tqd[b] == "symmetric bell") {
+    #  alpha <- beta <- 3
+    #}
+    #if (battery$tqd[b] == "top skew") {
+    #  alpha <- 5
+    #  beta <- 2
+    #}
+    #if (battery$tqd[b] == "bottom skew") {
+    #  alpha <- 2
+    #  beta <- 5
+    #}
     
     # .. we run the simulation according to the specified parameters:
     r <- simulation (
       criteria = cbind.data.frame(
         name    = c("q1"),
-        alpha   = alpha,
-        beta    = beta,
+        implicitScale = as.character(battery$tqd[b]),
+        #alpha   = alpha,
+        #beta    = beta,
         scale   = battery$scale[b],
         glh     = battery$glh[b],
         weights = c(1)
@@ -177,8 +178,9 @@ runBattery <- function(battery, debug = FALSE){
       timestamp = r$parameters$timestamp,
       aggrRule = as.character(r$parameters$aggrRule),
       ruleVariant = r$parameters$ruleVariant,
-      alpha = r$parameters$criteria$alpha,
-      beta = r$parameters$criteria$beta,
+      tqd = as.character(r$parameters$criteria$implicitScale),
+      #alpha = r$parameters$criteria$alpha,
+      #beta = r$parameters$criteria$beta,
       scale = r$parameters$criteria$scale,
       glh = r$parameters$criteria$glh,
       nSubmissions = r$parameters$nSubmissions,
@@ -222,10 +224,10 @@ runBattery <- function(battery, debug = FALSE){
     df$aggrRule[df$aggrRule == "majorityJudgement"] <- "majority judgment"
     df$aggrRule[is.na(df$aggrRule)] <- "null"
     
-    df$tqd <- "uniform"
-    df$tqd[df$alpha == 2 & df$beta == 5] <- "bottom skewed"
-    df$tqd[df$alpha == 5 & df$beta == 2] <- "top skewed"
-    df$alpha <- df$beta <- NULL
+    #df$tqd <- "uniform"
+    #df$tqd[df$alpha == 2 & df$beta == 5] <- "bottom skewed"
+    #df$tqd[df$alpha == 5 & df$beta == 2] <- "top skewed"
+    #df$alpha <- df$beta <- NULL
     df$competence <- 1 - df$reviewerError
     
     

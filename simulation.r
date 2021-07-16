@@ -10,8 +10,9 @@ suppressMessages(library("AUC", include.only = c("roc", "auc")))
 simulation <- function (
   criteria = cbind.data.frame(
     name    = c("q1"),    # name of the criterion
-    alpha   = c(3),       # alpha (parameter in the beta distribution)
-    beta    = c(3),       # beta  (parameter in the beta distribution)
+    implicitScale = "high", # or "low" or "bimodal"
+    #alpha   = c(3),       # alpha (parameter in the beta distribution)
+    #beta    = c(3),       # beta  (parameter in the beta distribution)
     scale   = c(5),       # scale (expressed as number of categories)
     glh     = c(0.1),     # grade language heterogeneity
     weights = c(1)        # relative weight of the criteria 
@@ -69,19 +70,28 @@ simulation <- function (
   # Creating submissions. We fill in the true quality for each attribute,
   # drawing from the true quality distribution specified in the dataframe
   # "criteria":
-  submissions <- data.frame(
-    trueQuality = rbeta(
-      n = nSubmissions,
-      shape1 = criteria$alpha,
-      shape2 = criteria$beta
+  if (criteria$implicitScale == "high") trueQuality <- rbeta(nSubmissions, 5, 2)
+  if (criteria$implicitScale == "low") trueQuality <- rbeta(nSubmissions, 5, 2)
+  if (criteria$implicitScale == "bimodal") {
+    trueQuality <- apply(
+      cbind(
+        rbeta(nSubmissions, 5, 2),
+        rbeta(nSubmissions, 2, 5)
+      ),
+      MARGIN = 1,
+      FUN = mean
     )
+  }
+  
+  submissions <- data.frame(
+    trueQuality = trueQuality
   )
   if(discreteMerit) submissions$trueQuality <-
     round(submissions$trueQuality * 20) / 20
   
-  submissions$refQuality <- rnorm(
+  submissions$refQuality <- truncate(rnorm(
     n = nSubmissions, mean = submissions$trueQuality, sd = truthNoise
-  )
+  ))
   if(discreteMerit) submissions$refQuality <-
     truncate(round(submissions$refQuality * 20) / 20)
   
@@ -94,12 +104,15 @@ simulation <- function (
   
   # There might be noise in the determination of the correct grade, too, since
   # the rating task might not be defined.
+  # Note how the reference panel uses a finer-grained evaluation scale (one with
+  # 100 categories) than the field panel (which only uses criteria$scale many).
   submissions$refGrade <- findInterval(
     submissions$refQuality,
-    #truncate(rnorm(
-    #  n = nSubmissions, mean = submissions$trueQuality, sd = truthNoise
-    #)),
-    thresholds
+    qbeta(
+      1:99 / 100,
+      shape1 = 2, shape2 = 1
+    )
+    #thresholds
   )
   
   # Next, we calculate, for each submission, what would be the true ranking
@@ -112,7 +125,7 @@ simulation <- function (
     ties.method = "first"
   )
   submissions$refRanking <- rank(
-    1 - submissions$refQuality,
+    1 - submissions$refGrade, #use refQuality if ref. precision is infinite
     na.last = "keep",
     ties.method = "first"
   )
@@ -170,7 +183,7 @@ simulation <- function (
   grades <- matrix(NA, nrow = nSubmissions, ncol = nReviewers)
   
   # For each reviewer and its of its submissions:
-  for (rev in 1:nReviewers){ for (prop in which(rnw[rev,] == 1)){
+  for(rev in 1:nReviewers) {for(prop in which(rnw[rev,] == 1)) {
     
     # Determine the grade:
     grades[prop,rev] <- rate(
@@ -573,17 +586,17 @@ if (FALSE) {
 sim <- simulation(
   criteria = cbind.data.frame(
     name    = c("q1"),    # name of the criterion
-    alpha   = c(5),       # alpha (parameter in the beta distribution)
-    beta    = c(2),       # beta  (parameter in the beta distribution)
+    implicitScale = "high",
+    #alpha   = c(5),       # alpha (parameter in the beta distribution)
+    #beta    = c(2),       # beta  (parameter in the beta distribution)
     scale   = c(5),       # scale (expressed as number of categories)
-    #gradeLanguage = c("asymmetric"), # Grade language: symmetric or asymmetric
     glh     = c(0.1),     # grade language heterogeneity
     weights = c(1)        # relative weight of the criteria 
   ), 
   nSubmissions = 100,
   nReviewersPerProp = 3,
   nPropPerReviewer = 100,
-  truthNoise = 0.1,
+  truthNoise = 0,
   reviewerError = 0.2,
   reviewerVariability = 0,
   aggrRule = c(
@@ -596,7 +609,7 @@ sim <- simulation(
     "bordaCount",
     "control"
   ),
-  ruleVariant = "gloomy", #######################3 "none"
+  ruleVariant = "none",
   nAccepted = c(5, 10, 20, 50),
   #seed = 12345,#sample(-999999:999999, size = 1)
   debug = FALSE
