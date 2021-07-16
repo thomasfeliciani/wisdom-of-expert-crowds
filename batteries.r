@@ -162,6 +162,7 @@ runBattery <- function(battery, debug = FALSE){
       nPropPerReviewer = battery$nSubmissions[b],# All reviewers review all
       truthNoise = battery$truthNoise[b],
       reviewerError = battery$reviewerError[b],
+      reviewerVariability = 0,
       aggrRule = as.character(battery$aggrRule[b]),
       ruleVariant = battery$ruleVariant[b],
       nAccepted = nAccepted,

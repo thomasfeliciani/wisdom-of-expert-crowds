@@ -21,7 +21,7 @@ simulation <- function (
   nPropPerReviewer = 3, # max
   truthNoise = 0.2,
   reviewerError = 0.2, # reviewer competence is defined as 1 - reviewerError
-  reviewerVariability = 0.2,
+  reviewerVariability = 0,
   reviewerBias = 0,
   criteriaWeightsError = 0,
   aggrRule = c(
@@ -585,7 +585,7 @@ sim <- simulation(
   nPropPerReviewer = 100,
   truthNoise = 0.1,
   reviewerError = 0.2,
-  reviewerVariability = 0.2,
+  reviewerVariability = 0,
   aggrRule = c(
     "mean",
     "excludeExtremes",

@@ -15,47 +15,70 @@ exportFormat = "png" #"png" or "tiff" are supported.
 
 
 
-# Figure 1: merit distribution__________________________________________________
+# Figure A1: merit distribution_________________________________________________
+seq <- seq(from = 0, to = 1, by = 0.001)
+df <- rbind(
+  data.frame(
+    condition = rep("high", times = length(seq)),
+    x = seq,
+    y = dbeta(seq, shape1 = 5, shape2 = 2)
+  ),
+  data.frame(
+    condition = rep("low", times = length(seq)),
+    x = seq,
+    y = dbeta(seq, shape1 = 2, shape2 = 5)
+  ),
+  data.frame(
+    condition = rep("bimodal", times = length(seq)),
+    x = seq,
+    y = 1/2 * (dbeta(seq, shape1=2, shape2=5) + dbeta(seq, shape1=5, shape2=2)
+    )
+  )
+)
+df$condition <- factor(
+  df$condition, levels = c("high", "low", "bimodal"))
+
+
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_1.", exportFormat),
-  width = 1500,
-  height = 800, #600,
+  filename = paste0("./outputGraphics/figure_A1.", exportFormat),
+  width = 1300,
+  height = 580, #600,
   res = 300, units = "px"
 )
 if(exportFormat == "png") {do.call(png, figureParameters)} else {
-    do.call(tiff, figureParameters)}
+  do.call(tiff, figureParameters)}
 
-par(mfrow=c(1,2))
-
-yl = 2.5
-x = seq(from = 0, to = 1, by = 0.001)
-
-
-plot(
-  x, dbeta(x, shape1 = 2, shape2 = 5),
-  col = "darkorange", type = "l", frame.plot = FALSE, ylim = c(0,yl), yaxs="i",
-  yaxt = "n", xaxp = c(0, 1, 2), ylab = "", xlab = "merit"
-)
-title(bquote(atop(
-  "low merit condition", paste(alpha, " = 2, ", beta, " = 5"))))
-title(ylab="density", line=1, cex.lab=1.2)
-
-plot(
-  x, dbeta(x, shape1 = 5, shape2 = 2),
-  col = "darkorange", type = "l", frame.plot = FALSE, ylim = c(0,yl), yaxs="i",
-  yaxt = "n", xaxp = c(0, 1, 2), ylab = "", xlab = "merit"
-)
-
-title(bquote(atop(
-  "high merit condition", paste(alpha, " = 5, ", beta, " = 2"))))
+ggplot(data = df, aes(x = x, y = y)) +
+  geom_path(color = "darkorange1") +
+  facet_grid(cols = vars(condition)) +
+  scale_y_continuous(limits = c(0, max(df$y +0.05)), expand = c(0,0)) +
+  scale_x_continuous(
+    limits = c(0,1), expand = c(0,0),
+    breaks = c(0,0.5,1), labels = c(0,0.5,1)
+  ) +
+  labs(title = "merit condition", y = "density") +
+  theme(
+    panel.spacing = unit(1.5, "lines"),
+    strip.background = element_rect(fill = "gray90"),
+    panel.border = element_blank(),
+    panel.background = element_rect(fill = "gray97"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.line.y = element_blank(),
+    axis.line.x = element_line(),
+    axis.title.x = element_blank()
+  )
 
 dev.off()
-rm(x, yl)
 
 
 
 
-# Figure 2: Grading languages___________________________________________________
+
+# Figure A2: Grading languages__________________________________________________
 #
 #
 gl <- list(
@@ -82,7 +105,7 @@ ls = 2.8
 padd = 0.02
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_2.", exportFormat),
+  filename = paste0("./outputGraphics/figure_A2.", exportFormat),
   width = 800,
   height = 800,
   units = "px",
@@ -119,14 +142,15 @@ ggplot(
             color=cl,check_overlap=TRUE, size=ls) +
   geom_text(aes(y=(1-V4)/2+V4, x=id, label=labz[5], hjust = 0),
             color=cl,check_overlap=TRUE, size=ls) +
-  ylab("\nmerit") +
+  ylab("\nimplicit scale") +
   scale_y_continuous(expand = c(0, 0), breaks = c(0:5/5)) +
   scale_x_discrete(expand = expansion(mult = c(0.3, 0.9)), position = "top") +
   theme(
     legend.position = "none",
     panel.border = element_blank(),
     panel.background = element_blank(),
-    panel.grid.major.x = element_line(color = "darkorange1"),#black
+    panel.grid.major.x = element_line(
+      color = "darkorange1", linetype = "dotted", size = 0.5),
     panel.grid.major.y = element_line(color = "gray95"),
     panel.grid.minor = element_blank(),
     axis.ticks.x = element_blank(),
@@ -140,7 +164,7 @@ rm(asymm, gl, cl, labz, ls, padd, pointer, ps, t, d)
 
 
 
-# Figure 3: Grading languages___________________________________________________
+# Figure A3: Grading languages__________________________________________________
 #
 #
 granul <- c(2, 5, 10)#c(2,5,10,20)
@@ -162,7 +186,7 @@ th <- ggplot(data = d, aes(x = th, y = as.factor(granularity))) +
       xend = rep(1, times = length(granul)), y = granul, yend = granul
     ),
     aes(x = x, y = y, xend = xend, yend = yend),
-    color = "darkorange1"#alpha("darkorange1", 0.5) 
+    color = "darkorange1", linetype = "dotted", size = 0.5
   ) +
   geom_point(color = "white", shape = 15, size = 2) +# masks the orange line
   geom_point( # masks the line at the lowest and highest limit of the scale
@@ -191,7 +215,7 @@ th <- ggplot(data = d, aes(x = th, y = as.factor(granularity))) +
     labels = c("L=10", "L=2", "L=5")
   ) +
   labs(
-    x = "merit", y = ""
+    x = "implicit scale", y = ""
   ) +
   theme(
     legend.position = "none",
@@ -244,7 +268,8 @@ pdf <- ggplot() + # probability density function
     panel.grid.minor = element_blank(),
     axis.ticks.y = element_blank(),
     axis.line.y = element_blank(),
-    axis.line.x = element_line(color = "darkorange1"),
+    axis.line.x = element_line(
+      color = "darkorange1", linetype = "dotted", size = 0.5),
     axis.title.x = element_blank(),
     axis.text.x = element_blank(),
     axis.ticks.x = element_blank() 
@@ -261,7 +286,7 @@ figure3 <- ggarrange(
 
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_3.", exportFormat),
+  filename = paste0("./outputGraphics/figure_A3.", exportFormat),
   width = 1000,
   height = 1000,
   units = "px",
@@ -305,7 +330,7 @@ ri$commonUnderstGrades <- 1 - ri$glh
 
 
 
-# Figure 4 _____________________________________________________________________
+# Figure 2 _____________________________________________________________________
 # Baseline: mean vs control
 rii <- subset(
   ri,
@@ -327,7 +352,7 @@ df <- rii[,c("aggrRule", "CohensKappa20")] #"qualityEff", "kts", "KTC"
 
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_4.", exportFormat),
+  filename = paste0("./outputGraphics/figure_2.", exportFormat),
   width = 920,
   height = 850,
   units = "px",
@@ -365,7 +390,7 @@ dev.off()
 
 
 
-# Figure 5 _____________________________________________________________________
+# Figure 3 _____________________________________________________________________
 # Varying panel size
 rii <- subset(
   ri,
@@ -396,7 +421,7 @@ df <- subset(df, df$aggrRule == "mean")
 
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_5.", exportFormat),
+  filename = paste0("./outputGraphics/figure_3.", exportFormat),
   width = 1320,
   height = 850,
   units = "px",
@@ -445,7 +470,7 @@ dev.off()
 
 
 
-# Figure 6 _____________________________________________________________________
+# Figure 4 _____________________________________________________________________
 # Granularity of the grading scale
 rii <- subset(
   ri,
@@ -473,7 +498,7 @@ df$condition <- as.factor(df$condition)
 
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_6.", exportFormat),
+  filename = paste0("./outputGraphics/figure_4.", exportFormat),
   width = 1520,
   height = 800,
   units = "px",
@@ -516,8 +541,7 @@ dev.off()
 
 
 
-
-# Figure 7 _____________________________________________________________________
+# Figure 5 _____________________________________________________________________
 # Aggregation rule
 rii <- subset(
   ri,
@@ -548,6 +572,7 @@ df$aggrRule <- factor(
     "Borda count", "majority judgment"
   )
 )
+
 
 figureParameters <- list(
   filename = paste0("./outputGraphics/figure_7.", exportFormat),
@@ -595,7 +620,7 @@ dev.off()
 
 
 
-# Figure 8 _____________________________________________________________________
+# Figure 6 _____________________________________________________________________
 # Diversity in interpretating the grading scale
 rii <- subset(
   ri,
@@ -610,13 +635,13 @@ rii <- subset(
     ri$discreteMerit == FALSE
 )
 
-rii$commonUnderstGrades <- sapply(
-  rii$commonUnderstGrades,
-  FUN = function(x){paste0("U=", as.character(x))}
+rii$glh <- sapply(
+  rii$glh,
+  FUN = function(x){paste0("\u03D1=", as.character(x))}
 )
-rii$commonUnderstGrades <- as.factor(rii$commonUnderstGrades)
+rii$glh <- as.factor(rii$glh)
 #rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
-df <- rii[,c("aggrRule", "baseline", "commonUnderstGrades", "CohensKappa20")]
+df <- rii[,c("aggrRule", "baseline", "glh", "CohensKappa20")]
 df$condition <- 1 # for determining the fill color of the boxplots.
 df$condition[df$baseline == FALSE] <- 2
 df$condition[df$aggrRule == "control"] <- 3
@@ -624,7 +649,7 @@ df$condition <- as.factor(df$condition)
 
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_8.", exportFormat),
+  filename = paste0("./outputGraphics/figure_6.", exportFormat),
   width = 1220,
   height = 800,
   units = "px",
@@ -640,7 +665,7 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   #geom_boxplot( # control condition
   #  data = control, color = "black", alpha = 0.9, width = 0.3
   #) +
-  facet_grid(cols = vars(commonUnderstGrades), scales = "free_x", switch = "x")+
+  facet_grid(cols = vars(glh), scales = "free_x", switch = "x")+
   scale_y_continuous(expand = c(0,0)) +
   scale_x_discrete(position = "top", limits = c("control", "mean")) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
@@ -674,7 +699,7 @@ dev.off()
 
 # Robustness ___________________________________________________________________
 #
-# Reviewer competence
+# Implicit noise (lambda)
 rii <- subset(
   ri,
   ri$tqd == "top skewed" &
@@ -688,13 +713,13 @@ rii <- subset(
     ri$discreteMerit == FALSE
 )
 
-rii$competence <- sapply(
-  rii$competence,
-  FUN = function(x){paste0("C=", as.character(x))}
+rii$reviewerError <- sapply(
+  rii$reviewerError,
+  FUN = function(x){paste0("\u03BB=", as.character(x))}
 )
-rii$competence <- as.factor(rii$competence)
+rii$reviewerError <- as.factor(rii$reviewerError)
 #rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
-df <- rii[,c("aggrRule", "baseline", "competence", "CohensKappa20")]
+df <- rii[,c("aggrRule", "baseline", "reviewerError", "CohensKappa20")]
 df$condition <- 1 # for determining the fill color of the boxplots.
 df$condition[df$baseline == FALSE] <- 2
 df$condition[df$aggrRule == "control"] <- 3
@@ -702,7 +727,7 @@ df$condition <- as.factor(df$condition)
 
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_competence.", exportFormat),
+  filename = paste0("./outputGraphics/figure_7.", exportFormat),
   width = 1420,
   height = 800,
   units = "px",
@@ -718,7 +743,7 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   #geom_boxplot( # control condition
   #  data = control, color = "black", alpha = 0.9, width = 0.3
   #) +
-  facet_grid(cols = vars(competence), scales = "free_x", switch = "x") +
+  facet_grid(cols = vars(reviewerError), scales = "free_x", switch = "x") +
   scale_y_continuous(expand = c(0,0)) +
   scale_x_discrete(position = "top", limits = c("control", "mean")) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
@@ -743,24 +768,35 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   )
 dev.off()
 
-#
-# True merit distribution
+# Figure 11 ____________________________________________________________________
+# Merit condition (aka true merit distribution)
 rii <- subset(
   ri,
   #ri$tqd == "top skewed" &
-    ri$scale == 5 & 
+  ri$scale == 5 & 
     ri$glh == 0.05 &
     ri$truthNoise == 0 &
     ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule %in% c("mean", "control") &
+    ri$aggrRule %in% c(
+      "control", "lowest score", "gloomy mean",
+      "mean", "sunny mean", "highest score") &
     ri$discreteMerit == FALSE
 )
+rii$tqd[rii$tqd == "bottom skewed"] <- "low"
+rii$tqd[rii$tqd == "top skewed"] <- "high"
+rii$tqd[rii$tqd == "bimodal"] <- "bimodal"
 
-rii$tqd <- factor(rii$tqd, levels = unique(rii$tqd))
-#rii$scale <- factor(rii$scale, levels = c("L=2", "L=5", "L=10"))
+rii$tqd <- factor(rii$tqd, levels = c("high", "low", "bimodal"))
 df <- rii[,c("aggrRule", "baseline", "tqd", "CohensKappa20")]
+
+df$aggrRule <- factor(
+  df$aggrRule,
+  levels = c(
+    "control", "lowest score", "gloomy mean",
+    "mean", "sunny mean", "highest score")
+)
 df$condition <- 1 # for determining the fill color of the boxplots.
 df$condition[df$baseline == FALSE] <- 2
 df$condition[df$aggrRule == "control"] <- 3
@@ -768,28 +804,29 @@ df$condition <- as.factor(df$condition)
 
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_tqd.", exportFormat),
-  width = 1220,
-  height = 800,
+  filename = paste0("./outputGraphics/figure_11.", exportFormat),
+  width = 1800,
+  height = 850,
   units = "px",
   res = 300
 )
 if(exportFormat == "png") {do.call(png, figureParameters)} else {
   do.call(tiff, figureParameters)}
 
-ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
+ggplot(
+  df,
+  aes(y = CohensKappa20, x = tqd, fill = condition)
+) +
   geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
   geom_violin(fill = "gray70", color = "gray60", scale = "width", width = 0.8) +
   geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
-  #geom_boxplot( # control condition
-  #  data = control, color = "black", alpha = 0.9, width = 0.3
-  #) +
-  facet_grid(cols = vars(tqd), scales = "free_x", switch = "x") +
+  #scale_x_discrete(breaks = levels(df$tqd)) +
   scale_y_continuous(expand = c(0,0)) +
-  scale_x_discrete(position = "top", limits = c("control", "mean")) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
+  facet_grid(cols = vars(aggrRule)) +
+  #facet_wrap(df$aggrRule) +
+  #facet_grid(cols = vars(df$aggrRule)) +
   labs(
-    #title = "choice performance (k=20)",
     y = "choice performance\n(Cohen's kappa, k=20)"
   ) +
   theme(
@@ -800,13 +837,13 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
     panel.border = element_blank(),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
-    panel.spacing = unit(1.5, "lines"),
+    panel.spacing = unit(0.5, "lines"),
     axis.line.y = element_line(),
     axis.title.x = element_blank(),
-    axis.text.x = element_blank(),#element_text(angle = 30, hjust = 0),
-    axis.ticks.x = element_blank(),
-    legend.position = "NA",
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    legend.position = "NA"
   )
+
 dev.off()
 
 
@@ -920,7 +957,7 @@ df$condition <- as.factor(df$condition)
 
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_K.", exportFormat),
+  filename = paste0("./outputGraphics/figure_9.", exportFormat),
   width = 1420,
   height = 800,
   units = "px",
@@ -939,7 +976,7 @@ ggplot(df, aes(y = value, x = aggrRule, fill = condition)) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
     #title = "choice performance (all levels of k)",
-    y = "choice performance\n(Cohen's kappa, k=20)"
+    y = "choice performance\n(Cohen's kappa)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -971,10 +1008,10 @@ rii <- subset(
     ri$nReviewersPerProp == 5 &
     ri$competence == 0.8 &
     ri$ruleVariant == "none" &
-    ri$aggrRule %in% c("mean", "control") &
+    ri$aggrRule %in% c("mean") &
     ri$discreteMerit == FALSE
 )
-riiEnhanced <- subset(
+riiCommunic <- subset(
   ri,
   ri$tqd == "top skewed" &
     ri$scale == 10 &
@@ -986,20 +1023,35 @@ riiEnhanced <- subset(
     ri$aggrRule == "majority judgment" &
     ri$discreteMerit == FALSE
 )
+riiEval <- subset(
+  ri,
+  ri$tqd == "top skewed" &
+    ri$scale == 5 &
+    ri$glh == 0.05 &
+    ri$truthNoise == 0 &
+    ri$nReviewersPerProp == 5 &
+    ri$competence == 1 &
+    ri$ruleVariant == "none" &
+    ri$aggrRule %in% c("mean") &
+    ri$discreteMerit == FALSE
+)
+rii$treatment <- "baseline"
+riiCommunic$treatment <- "better communicators"
+riiEval$treatment <- "better evaluators"
 #ggplot(riiEnhanced, aes(x = aggrRule,y = CohensKappa20)) + geom_boxplot()
 
-rii <- rbind(rii, riiEnhanced)
-rii$aggrRule <- as.character(rii$aggrRule)
-rii$aggrRule[rii$aggrRule == "mean"] <- "baseline"
-rii$aggrRule[rii$aggrRule == "majority judgment"]<-"grading scale\nenhancements"
-rii$aggrRule <- as.factor(rii$aggrRule)
+rii <- rbind(rii, riiCommunic, riiEval)
+#rii$aggrRule <- as.character(rii$aggrRule)
+#rii$aggrRule[rii$aggrRule == "mean"] <- "baseline"
+#rii$aggrRule[rii$aggrRule == "majority judgment"]<-"grading scale\nenhancements"
+#rii$aggrRule <- as.factor(rii$aggrRule)
 #rii$aggrRule <- factor(rii$aggrRule, levels = rev(levels(rii$aggrRule)))
-df <- rii[,c("aggrRule", "CohensKappa20")] #"qualityEff", "kts", "KTC"
+df <- rii[,c("treatment", "CohensKappa20")] #"qualityEff", "kts", "KTC"
 
 
 figureParameters <- list(
-  filename = paste0("./outputGraphics/figure_4extra.", exportFormat),
-  width = 1120,
+  filename = paste0("./outputGraphics/figure_8.", exportFormat),
+  width = 1000,
   height = 850,
   units = "px",
   res = 300
@@ -1007,14 +1059,14 @@ figureParameters <- list(
 if(exportFormat == "png") {do.call(png, figureParameters)} else {
   do.call(tiff, figureParameters)}
 
-ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = aggrRule)) +
+ggplot(df, aes(y = CohensKappa20, x = treatment, fill = treatment)) +
   geom_hline(yintercept = 0, linetype = 2, color = "gray60") +
   geom_violin(fill = "gray80", color = "gray75", scale = "width") +
   geom_boxplot(color = "black", alpha = 0.9, width = 0.3) +
   scale_y_continuous(expand = c(0,0)) +
-  scale_x_discrete(
-    limits = c("control", "baseline","grading scale\nenhancements")) +
-  scale_fill_manual(values = c("darkorange", "gray30", "white")) +
+  #scale_x_discrete() +
+    #limits = c("control", "baseline","grading scale\nenhancements")) +
+  scale_fill_manual(values = c("darkorange", "white", "white")) +
   labs(
     #title = "choice performance (k=20)",
     y = "choice performance\n(Cohen's kappa, k=20)"
@@ -1030,6 +1082,7 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = aggrRule)) +
     panel.spacing = unit(1.5, "lines"),
     axis.line = element_line(),
     axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 1),
     legend.position = "NA",
   )
 dev.off()
