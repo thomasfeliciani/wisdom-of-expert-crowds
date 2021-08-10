@@ -10,7 +10,7 @@ library("parallel")
 library("doSNOW")
 #set.seed(12345)
 
-parallelExecutions <- 100
+parallelExecutions <- 500
 smartParameterSpace <- TRUE
 
 # Setting up the parameter space.
@@ -20,23 +20,23 @@ tqd <- c ("high", "low", "bimodal") #"symmetric bell",
 scale <- c(2, 3, 4, 5, 7, 10)
 glh <- c(0, 0.05, 0.1)#0:4/20#0:8/40
 nSubmissions <- c(100)
-nReviewersPerProp <- 2:12
+nReviewersPerProp <- 2:13
 truthNoise <- 0#c(0, 0.2, 0.4)
 discreteMerit <- FALSE#c(TRUE, FALSE)
-reviewerCompetence <- c(1, 0.9, 0.8, 0.6)
+reviewerError <- c(0, 0.1, 0.2, 0.4)# c(1, 0.9, 0.8, 0.6)
 ruleVariant <- "none"#c("none", "gloomy", "sunny")
 aggrRule <- c(
   "control",
   "mean",
   "excludeExtremes",
   "hypermean",
-  "sunnyMean",
-  "gloomyMean",
+  #"sunnyMean",
+  #"gloomyMean",
   "lowestScore",
   "highestScore",
   "median",
-  "majorityJudgement",
-  "bordaCount"
+  "majorityJudgement"#,
+  #"bordaCount"
 )
 battery <- expand.grid(
   tqd = tqd,
@@ -46,7 +46,7 @@ battery <- expand.grid(
   nReviewersPerProp = nReviewersPerProp,
   truthNoise = truthNoise,
   discreteMerit = discreteMerit,
-  reviewerError = 1 - reviewerCompetence,
+  reviewerError = reviewerError,
   ruleVariant = ruleVariant,
   aggrRule = aggrRule
 )
@@ -76,15 +76,17 @@ if (smartParameterSpace) {
     "tqd", "scale", "glh", "nSubmissions", "nReviewersPerProp",
     "truthNoise", "discreteMerit", "reviewerError", "ruleVariant", "aggrRule")
   #closeToBaseline <- apply(
-  battery$distToBaseline <- 0
+  distToBaseline <- c()
   for (r in 1:nrow(battery)) {
-    battery$distToBaseline[r] <- sum(battery[r,variables] != baseline)
+    distToBaseline[r] <- sum(battery[r,variables] != baseline)
   }
   
-  # We also keep this param. config because it's of special interest.
+  # Points of special interest in the parameter space that we want to keep:
+  # 
+  # 1/2) "best communicators" scenario
   # This configuration has all grading-scale-related enhancements:
   # High granularity, no GL heterogeneity, and any of the aggregation rules.
-  battery$distToBaseline[
+  distToBaseline[
     battery$tqd == "high" &
     battery$scale == 10 & ###
     battery$glh == 0 & ###
@@ -97,8 +99,23 @@ if (smartParameterSpace) {
     #battery$aggrRule == "mean" ###
   ] <- 1
   
-  battery <- battery[battery$distToBaseline <= 3,]
-  battery$distToBaseline <- NULL
+  # 2/2) "crowdsourcing" scenario
+  distToBaseline[
+    tqd == "high" &
+    scale == 5 &
+    glh == max(glh) & ##########
+    nSubmissions == 100 &
+    nReviewersPerProp == max(nReviewersPerProp) & ##########
+    truthNoise == 0 &
+    discreteMerit == FALSE &
+    reviewerError == max(reviewerError) &
+    ruleVariant == "none" &
+    aggrRule == "mean"
+  ] <- 1
+  
+  
+  battery <- battery[distToBaseline <= 3,]
+  #battery$distToBaseline <- NULL
 }
 #x = battery[2223,]
 #battery <- battery[51:100,] # This shortens the battery further (for testing).
