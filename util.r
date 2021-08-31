@@ -2,7 +2,7 @@
 #
 
 
-# Allocation rules______________________________________________________________
+# Allocation ___________________________________________________________________
 # 
 # Here we create a network of reviewers and authors/applicants/submissions.
 # This function creates a matrix, where rows are reviewers and columns are 

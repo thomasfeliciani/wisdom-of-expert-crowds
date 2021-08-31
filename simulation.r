@@ -70,10 +70,10 @@ simulation <- function (
   # Creating submissions. We fill in the true quality for each attribute,
   # drawing from the true quality distribution specified in the dataframe
   # "criteria":
-  if (criteria$implicitScale == "high") trueQuality <- rbeta(nSubmissions, 5, 2)
-  if (criteria$implicitScale == "low") trueQuality <- rbeta(nSubmissions, 5, 2)
+  if (criteria$implicitScale == "high") referenceCat <- rbeta(nSubmissions,5,2)
+  if (criteria$implicitScale == "low") referenceCat <- rbeta(nSubmissions, 5, 2)
   if (criteria$implicitScale == "bimodal") {
-    trueQuality <- apply(
+    referenceCat <- apply(
       cbind(
         rbeta(nSubmissions, 5, 2),
         rbeta(nSubmissions, 2, 5)
@@ -84,18 +84,18 @@ simulation <- function (
   }
   
   submissions <- data.frame(
-    trueQuality = trueQuality
+    referenceCat = referenceCat
   )
-  if(discreteMerit) submissions$trueQuality <-
-    round(submissions$trueQuality * 20) / 20
+  if(discreteMerit) submissions$referenceCat <-
+    round(submissions$referenceCat * 20) / 20
   
   submissions$refQuality <- truncate(rnorm(
-    n = nSubmissions, mean = submissions$trueQuality, sd = truthNoise
+    n = nSubmissions, mean = submissions$referenceCat, sd = truthNoise
   ))
   if(discreteMerit) submissions$refQuality <-
     truncate(round(submissions$refQuality * 20) / 20)
   
-  # Based on their trueQuality, we calculate what grade they deserve in the
+  # Based on their referenceCat, we calculate what grade they deserve in the
   # specified grading language:
   thresholds <- qbeta(
     1:(criteria$scale - 1) / criteria$scale,
@@ -118,9 +118,9 @@ simulation <- function (
   # Next, we calculate, for each submission, what would be the true ranking
   # position of the submissions. We assume a strict ordering for now, so we
   # break all ties that occur.
-  submissions$trueRanking <- rank(
+  submissions$refRanking <- rank(
     #1 - submissions$trueGrade,
-    1 - submissions$trueQuality, # "1 -" allows to get low ranking number when
+    1 - submissions$referenceCat, # "1 -" allows to get low ranking number when
     na.last = "keep",            # the true quality is high.
     ties.method = "first"
   )
@@ -170,6 +170,7 @@ simulation <- function (
       mean = thresholds,
       sd = criteria$glh
     ))
+    #gl <- runif(n = criteria$scale - 1)
     gradeLanguages[[i]] <- gl[order(gl)]
   }
   
@@ -188,7 +189,7 @@ simulation <- function (
     # Determine the grade:
     grades[prop,rev] <- rate(
       evaluatedAttribute = # Fix in case of combinatorial aggregation
-        submissions$trueQuality[prop] + reviewers$bias[rev],
+        submissions$referenceCat[prop] + reviewers$bias[rev],
       sd = reviewers$error[rev],
       rule = "quality",
       thresholds = gradeLanguages[[rev]],
@@ -239,7 +240,7 @@ simulation <- function (
       for (prop in 1:nSubmissions){
         x[prop] <- rate(
           evaluatedAttribute =
-            submissions$trueQuality[prop] + reviewers$bias[sampleReviewer],
+            submissions$referenceCat[prop] + reviewers$bias[sampleReviewer],
           sd = reviewers$error[sampleReviewer],
           rule = "quality",
           thresholds = gradeLanguages[[sampleReviewer]],
@@ -291,7 +292,7 @@ simulation <- function (
     
     
     ## Here we calculate, for each value of nAccepted, which proposals have a
-    ## trueQuality level worthy of acceptance, and which an estimQuality level
+    ## referenceCat level worthy of acceptance, and which an estimQuality level
     ## that would get them accepted. We store everything in a dedicated list.
     #tqDeserved <- estimated <- list()
     #for (a in 1:length(nAccepted)){
@@ -300,7 +301,7 @@ simulation <- function (
     #  # whose objective grade is equal to or higher than the true quality of the
     #  # proposals on the cutoff threshold.
     #  tqDeserved[[a]] <- submissions$trueGrade >=
-    #    submissions[submissions$trueRanking == nAccepted[a],]$trueGrade
+    #    submissions[submissions$refRanking == nAccepted[a],]$trueGrade
     #  
     #  # Estimated is set to TRUE for all proposals whose estimated quality is 
     #  # equal to or greater than the estimated quality of the proposal on the 
@@ -353,7 +354,7 @@ simulation <- function (
       k = nAccepted[a]
       
       # The deserved grade of the the k-th best in the merit ranking:
-      #thT <- submissions$trueGrade[submissions$trueRanking == k]
+      #thT <- submissions$trueGrade[submissions$refRanking == k]
       thT <- submissions$refQuality[submissions$refRanking == k]
       
       # The list of proposals that deserve funding: those that have a true
@@ -482,7 +483,7 @@ simulation <- function (
     #ktdTop <- c()
     #spearmanTop <- c()
     #for (a in 1:length(nAccepted)){
-    #  thT <- submissions$trueGrade[submissions$trueRanking == nAccepted[a]]
+    #  thT <- submissions$trueGrade[submissions$refRanking == nAccepted[a]]
     #  top <- which(submissions$trueGrade >= thT)
     #  
     #  meritRank <- rank(submissions$trueGrade[top], ties.method = "max")

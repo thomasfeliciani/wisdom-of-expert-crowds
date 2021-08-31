@@ -10,7 +10,7 @@ library("parallel")
 library("doSNOW")
 #set.seed(12345)
 
-parallelExecutions <- 500
+parallelExecutions <- 200 ######################################################
 smartParameterSpace <- TRUE
 
 # Setting up the parameter space.
@@ -18,10 +18,10 @@ smartParameterSpace <- TRUE
 # We start with the variables that will vary *between* simulations: 
 tqd <- c ("high", "low", "bimodal") #"symmetric bell",
 scale <- c(2, 3, 4, 5, 7, 10)
-glh <- c(0, 0.05, 0.1)#0:4/20#0:8/40
+glh <- c(0, 0.05, 0.1)#, 0.2, 0.4)#0:4/20#0:8/40 #######################
 nSubmissions <- c(100)
 nReviewersPerProp <- 2:13
-truthNoise <- 0#c(0, 0.2, 0.4)
+truthNoise <- 0#c(0, 0.2)
 discreteMerit <- FALSE#c(TRUE, FALSE)
 reviewerError <- c(0, 0.1, 0.2, 0.4)# c(1, 0.9, 0.8, 0.6)
 ruleVariant <- "none"#c("none", "gloomy", "sunny")
@@ -101,20 +101,20 @@ if (smartParameterSpace) {
   
   # 2/2) "crowdsourcing" scenario
   distToBaseline[
-    tqd == "high" &
-    scale == 5 &
-    glh == max(glh) & ##########
-    nSubmissions == 100 &
-    nReviewersPerProp == max(nReviewersPerProp) & ##########
-    truthNoise == 0 &
-    discreteMerit == FALSE &
-    reviewerError == max(reviewerError) &
-    ruleVariant == "none" &
-    aggrRule == "mean"
+    battery$tqd == "high" &
+    battery$scale == 5 &
+    battery$glh == max(glh) &
+    battery$nSubmissions == 100 &
+    battery$nReviewersPerProp == max(nReviewersPerProp) &
+    battery$truthNoise == 0 &
+    battery$discreteMerit == FALSE &
+    battery$reviewerError == max(reviewerError) &
+    battery$ruleVariant == "none" &
+    battery$aggrRule == "mean"
   ] <- 1
   
   
-  battery <- battery[distToBaseline <= 3,]
+  battery <- battery[distToBaseline <= 4,] #####################################
   #battery$distToBaseline <- NULL
 }
 #x = battery[2223,]
@@ -321,7 +321,7 @@ for (b in 1:nrow(battery)){
   x <- ri[ri$batteryConfiguration == b,]
   
   battery$nRuns[b] <- nrow(x)
-  for (var in 13:28){ # index of variables in x (see names(x))
+  for (var in 15:30){ # index of variables in x (see names(x))
     battery[b, paste0(names(x)[var], "_sd")] <- 
       sd(x[, var], na.rm = TRUE)
     battery[b, paste0(names(x)[var], "_mean")] <-
