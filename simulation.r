@@ -71,7 +71,19 @@ simulation <- function (
   # drawing from the true quality distribution specified in the dataframe
   # "criteria":
   if (criteria$implicitScale == "high") referenceCat <- rbeta(nSubmissions,5,2)
+  if (criteria$implicitScale == "extreme high 1") referenceCat <-
+    rbeta(nSubmissions,5,1)
+  if (criteria$implicitScale == "extreme high 2") referenceCat <-
+    rbeta(nSubmissions,10,1)
+  if (criteria$implicitScale == "extreme high 3") referenceCat <-
+    rbeta(nSubmissions,20,1)
   if (criteria$implicitScale == "low") referenceCat <- rbeta(nSubmissions, 5, 2)
+  if (criteria$implicitScale == "extreme low") referenceCat <-
+    rbeta(nSubmissions,1,10)
+  if (criteria$implicitScale == "extreme center") referenceCat <-
+    rbeta(nSubmissions,100,100)
+  if (criteria$implicitScale == "extreme bimodal") referenceCat <-
+    rbeta(nSubmissions,0.6,0.6)
   if (criteria$implicitScale == "bimodal") {
     referenceCat <- apply(
       cbind(
@@ -170,7 +182,7 @@ simulation <- function (
       mean = thresholds,
       sd = criteria$glh
     ))
-    #gl <- runif(n = criteria$scale - 1)
+    #gl <- runif(n = criteria$scale - 1)###############################
     gradeLanguages[[i]] <- gl[order(gl)]
   }
   

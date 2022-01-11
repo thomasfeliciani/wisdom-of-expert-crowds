@@ -10,17 +10,21 @@ library("parallel")
 library("doSNOW")
 #set.seed(12345)
 
-parallelExecutions <- 200 ######################################################
+parallelExecutions <- 100 ##############
 smartParameterSpace <- TRUE
 
 # Setting up the parameter space.
 #
 # We start with the variables that will vary *between* simulations: 
-tqd <- c ("high", "low", "bimodal") #"symmetric bell",
-scale <- c(2, 3, 4, 5, 7, 10)
+#tqd <- c ("high", "low", "bimodal") #"symmetric bell",
+tqd <- c ("high", "extreme high 1", "extreme high 2", "extreme high 3",
+          "low", "extreme low", "extreme center", "bimodal", "extreme bimodal")
+#scale <- c(2, 3, 4, 5, 7, 10)
+scale <- c(2, 4, 5, 10)
 glh <- c(0, 0.05, 0.1)#, 0.2, 0.4)#0:4/20#0:8/40 #######################
 nSubmissions <- c(100)
-nReviewersPerProp <- 2:13
+#nReviewersPerProp <- 2:13
+nReviewersPerProp <- c(2, 5, 10, 20)
 truthNoise <- 0#c(0, 0.2)
 discreteMerit <- FALSE#c(TRUE, FALSE)
 reviewerError <- c(0, 0.1, 0.2, 0.4)# c(1, 0.9, 0.8, 0.6)
@@ -114,7 +118,7 @@ if (smartParameterSpace) {
   ] <- 1
   
   
-  battery <- battery[distToBaseline <= 4,] #####################################
+  battery <- battery[distToBaseline <= 4,] ################### (default is 4)
   #battery$distToBaseline <- NULL
 }
 #x = battery[2223,]

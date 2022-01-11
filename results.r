@@ -10,7 +10,7 @@ library(ggpubr)
 library(viridis)
 source("simulation.r")
 
-exportFormat = "tiff" #"png" or "tiff" are supported.
+exportFormat = "png" #"png" or "tiff" are supported.
 
 
 
@@ -473,7 +473,7 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = aggrRule)) +
   scale_fill_manual(values = c("darkorange", "gray30")) +
   labs(
     #title = "correctness (k=20)",
-    y = "correctness\n(Cohen's kappa, k=20)"
+    y = "correctness\n(Cohen's kappa)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -548,7 +548,7 @@ ggplot(df, aes(y = CohensKappa20, x = nReviewersPerProp, fill = condition)) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
     #title = "correctness (k=20)",
-    x = "panel size (N)", y = "correctness\n(Cohen's kappa, k=20)"
+    x = "panel size (N)", y = "correctness\n(Cohen's kappa)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -623,7 +623,7 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
     #title = "correctness (k=20)",
-    y = "correctness\n(Cohen's kappa, k=20)"
+    y = "correctness\n(Cohen's kappa)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -706,7 +706,7 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = baseline)) +
   scale_x_discrete(position = "bottom") +#"top") +
   scale_fill_manual(values = c("white", "darkorange", "gray30")) +
   labs(
-    y = "correctness\n(Cohen's kappa, k=20)"
+    y = "correctness\n(Cohen's kappa)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -778,7 +778,7 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
     #title = "correctness (k=20)",
-    y = "correctness\n(Cohen's kappa, k=20)"
+    y = "correctness\n(Cohen's kappa)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -853,7 +853,7 @@ ggplot(df, aes(y = CohensKappa20, x = aggrRule, fill = condition)) +
   scale_fill_manual(values = c("darkorange", "white", "gray30")) +
   labs(
     #title = "correctness (k=20)",
-    y = "correctness\n(Cohen's kappa, k=20)"
+    y = "correctness\n(Cohen's kappa)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -899,16 +899,16 @@ df <- rii[,c(
 
 df <- reshape2::melt(df, id.vars = c("aggrRule", "baseline"))
 df$variable <- as.character(df$variable)
-df$variable[df$variable == "CohensKappa5"] <- "k=5"
-df$variable[df$variable == "CohensKappa10"] <- "k=10"
-df$variable[df$variable == "CohensKappa20"] <- "k=20"
-df$variable[df$variable == "CohensKappa50"] <- "k=50"
+df$variable[df$variable == "CohensKappa5"] <- "K=5"
+df$variable[df$variable == "CohensKappa10"] <- "K=10"
+df$variable[df$variable == "CohensKappa20"] <- "K=20"
+df$variable[df$variable == "CohensKappa50"] <- "K=50"
 df$variable <- factor(df$variable, levels = c(
-  "k=5", "k=10", "k=20", "k=50"
+  "K=5", "K=10", "K=20", "K=50"
 ))
 
 df$condition <- 1 # for determining the fill color of the boxplots.
-df$condition[df$baseline == FALSE | df$variable != "k=20"] <- 2
+df$condition[df$baseline == FALSE | df$variable != "K=20"] <- 2
 df$condition[df$aggrRule == "control"] <- 3
 df$condition <- as.factor(df$condition)
 
@@ -997,8 +997,8 @@ figureParameters <- list(
   units = "px",
   res = 300
 )
-if(exportFormat == "png") {do.call(png, figureParameters)} else {
-  do.call(tiff, figureParameters)}
+#if(exportFormat == "png") {do.call(png, figureParameters)} else {
+#  do.call(tiff, figureParameters)}
 
 ggplot(
   df,
@@ -1014,7 +1014,7 @@ ggplot(
   #facet_wrap(df$aggrRule) +
   #facet_grid(cols = vars(df$aggrRule)) +
   labs(
-    y = "correctness\n(Cohen's kappa, k=20)"
+    y = "correctness\n(Cohen's kappa)"
   ) +
   theme(
     plot.title = element_text(size = 14),
@@ -1031,7 +1031,7 @@ ggplot(
     legend.position = "NA"
   )
 
-dev.off()
+#dev.off()
 
 
 
