@@ -1,7 +1,11 @@
-**Last update**: 18 August 2021 by [REDACTED]
+**Last update**: 28 January 2022 by Thomas
 
 
-This folder contains the scripts and documentation related to a research paper currently under review.
+This folder contains the scripts and documentation related to the publication:
+
+- Feliciani, T., Morreau, M., Luo, J., Lucas, P., & Shankar, K. (2022). Designing grant-review panels for better funding decisions: Lessons from an empirically calibrated simulation model. *Research Policy*, 51(4), 104467. [https://doi.org/10.1016/j.respol.2021.104467](https://doi.org/10.1016/j.respol.2021.104467)
+
+Follows a description of the contents:
 
 # Documentation: "ODD protocol.docx"
 This file contains the *ODD protocol* (Overview, Design concepts, Details) for the simulation model.
